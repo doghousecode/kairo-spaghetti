@@ -505,6 +505,8 @@ export default function SpaghettiWall() {
         {/* Drag handle — touch here to reorder immediately (no long-press needed) */}
         <div
           onPointerDown={e => { e.stopPropagation(); onReorderStart(idea.id, filteredIdx, e.clientY); }}
+          onPointerUp={e => e.stopPropagation()}
+          onPointerCancel={e => e.stopPropagation()}
           style={{ color: t.textTertiary, fontSize: 18, padding: "4px 4px 4px 8px", flexShrink: 0,
             opacity: 0.5, touchAction: "none", cursor: "grab" }}
         >⠿</div>
