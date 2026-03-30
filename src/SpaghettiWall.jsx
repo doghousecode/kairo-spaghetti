@@ -506,14 +506,17 @@ export default function SpaghettiWall() {
 
       {/* ─── Header ─── */}
       <header style={{
-        padding: "52px 20px 12px",
+        padding: "20px 20px 12px",
         background: isSpaghetti ? "rgba(0,0,0,0.65)" : isDark ? "rgba(0,0,0,0.85)" : "rgba(242,242,247,0.85)",
         backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
         position: "sticky", top: 0, zIndex: 50,
         borderBottom: `0.5px solid ${t.separator}`,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.5px", color: t.text }}>Spaghetti Wall</h1>
+          <div>
+            <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.5px", color: t.text, lineHeight: 1.1 }}>Spaghetti Wall</h1>
+            <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 3 }}>Throw some ideas, see what sticks</div>
+          </div>
           {/* Theme toggle */}
           <div style={{ display: "flex", gap: 2, background: t.inputBg, borderRadius: 8, padding: 2 }}>
             {[
