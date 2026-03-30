@@ -14,27 +14,28 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { data, error } = await supabase
         .from('ideas')
-        .select('data, position')
+        .select('id, data, position')
         .order('position', { ascending: true })
       if (error) throw error
-      res.status(200).json(data.map(r => r.data))
+      const settings = data.find(r => r.id === '__settings')
+      const ideas = data.filter(r => r.id !== '__settings').map(r => r.data)
+      res.status(200).json({ ideas, themeMode: settings?.data?.themeMode || null })
 
     } else if (req.method === 'POST') {
-      const { ideas } = req.body
+      const { ideas, themeMode } = req.body
+
+      // Persist themeMode as a special settings row
+      await supabase.from('ideas').upsert({ id: '__settings', data: { themeMode }, position: -999 })
+
       if (ideas.length > 0) {
         const { error: upsertError } = await supabase
           .from('ideas')
           .upsert(ideas.map((idea, position) => ({ id: idea.id, data: idea, position })))
         if (upsertError) throw upsertError
       }
-      // Delete removed ideas
-      const ids = ideas.map(i => i.id)
-      const deleteQuery = supabase.from('ideas').delete()
-      if (ids.length > 0) {
-        await deleteQuery.not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`)
-      } else {
-        await deleteQuery.neq('id', '')
-      }
+      // Delete removed ideas (exclude the settings row)
+      const ids = [...ideas.map(i => i.id), '__settings']
+      await supabase.from('ideas').delete().not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`)
       res.status(200).json({ ok: true })
 
     } else {

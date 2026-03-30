@@ -8,8 +8,8 @@ async function loadData() {
   try {
     const res = await fetch("/api/ideas");
     if (res.ok) {
-      const ideas = await res.json();
-      return { ideas, themeMode: localStorage.getItem(THEME_KEY) || "auto" };
+      const { ideas, themeMode } = await res.json();
+      return { ideas, themeMode: themeMode || localStorage.getItem(THEME_KEY) || "auto" };
     }
   } catch(e) {}
   // Fallback to localStorage
@@ -25,7 +25,7 @@ async function saveData(d) {
     const res = await fetch("/api/ideas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ideas: d.ideas }),
+      body: JSON.stringify({ ideas: d.ideas, themeMode: d.themeMode }),
     });
     if (!res.ok) throw new Error();
   } catch(e) {
@@ -332,7 +332,7 @@ export default function SpaghettiWall() {
   const getPriority = (key) => PRIORITIES.find(p => p.key === key) || PRIORITIES[0];
 
   // ─── Filter ────────────────────────────────────────────────────────
-  const allTags = [...new Set(ideas.flatMap(i => i.tags || []))];
+  const allTags = [...new Set(ideas.flatMap(i => i.tags || []))].sort();
   const filtered = ideas.filter(i => {
     if (filterTags.length && !filterTags.some(ft => (i.tags || []).includes(ft))) return false;
     if (searchQ) { const q = searchQ.toLowerCase(); return i.title.toLowerCase().includes(q) || i.text.toLowerCase().includes(q) || (i.tags||[]).some(tt => tt.includes(q)); }
@@ -343,23 +343,57 @@ export default function SpaghettiWall() {
   const IdeaRow = ({ idea, idx, filteredIdx }) => {
     const isReordering = reorderingId === idea.id;
     const pri = getPriority(idea.priority);
+    const pressTimer = useRef(null);
+    const didDrag = useRef(false);
+    const pressY = useRef(0);
 
     // Spring shift: slide other items out of the way while dragging
     let shift = 0;
     if (reorderingId && !isReordering && reorderTargetIdx !== null) {
       const s = reorderStartIdx.current;
-      const t2 = reorderTargetIdx;
-      if (s < t2 && filteredIdx > s && filteredIdx <= t2) shift = -rowHeight;
-      else if (s > t2 && filteredIdx >= t2 && filteredIdx < s) shift = rowHeight;
+      const tgt = reorderTargetIdx;
+      if (s < tgt && filteredIdx > s && filteredIdx <= tgt) shift = -rowHeight;
+      else if (s > tgt && filteredIdx >= tgt && filteredIdx < s) shift = rowHeight;
     }
+
+    const startPress = (clientY) => {
+      didDrag.current = false;
+      pressY.current = clientY;
+      clearTimeout(pressTimer.current);
+      pressTimer.current = setTimeout(() => {
+        didDrag.current = true;
+        navigator.vibrate?.(10);
+        onReorderStart(idea.id, filteredIdx, pressY.current);
+      }, 380);
+    };
+
+    const endPress = () => {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+      if (!didDrag.current) {
+        setSelected(idea); setNoteInput(""); setEditingTitle(false);
+      }
+      didDrag.current = false;
+    };
+
+    const checkScrollCancel = (clientY) => {
+      if (pressTimer.current && !didDrag.current && Math.abs(clientY - pressY.current) > 8) {
+        clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+      }
+    };
 
     return (
       <div
+        onPointerDown={e => startPress(e.clientY)}
+        onPointerUp={endPress}
+        onPointerCancel={() => { clearTimeout(pressTimer.current); didDrag.current = false; }}
+        onPointerMove={e => checkScrollCancel(e.clientY)}
         style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "14px 16px",
           borderBottom: isSpaghetti ? "none" : `0.5px solid ${t.separator}`,
-          transition: isReordering ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease",
+          transition: isReordering ? "none" : "transform 0.3s cubic-bezier(0.34, 2.4, 0.64, 1), background 0.15s ease",
           transform: isReordering ? `translateY(${reorderY}px)` : shift ? `translateY(${shift}px)` : "none",
           zIndex: isReordering ? 100 : 1,
           position: "relative",
@@ -372,12 +406,16 @@ export default function SpaghettiWall() {
           boxShadow: isSpaghetti ? "0 2px 12px rgba(0,0,0,0.35)" : isReordering ? "0 8px 24px rgba(0,0,0,0.15)" : "none",
           backdropFilter: isSpaghetti ? "blur(6px)" : "none",
           WebkitBackdropFilter: isSpaghetti ? "blur(6px)" : "none",
-          userSelect: "none",
+          userSelect: "none", WebkitUserSelect: "none",
+          cursor: isReordering ? "grabbing" : "pointer",
+          touchAction: isReordering ? "none" : "pan-y",
         }}
       >
-        {/* Priority indicator — tap to cycle */}
-        <button onClick={e => { e.stopPropagation(); cyclePriority(idea.id); }}
-          title={`Priority: ${pri.label}`}
+        {/* Priority indicator — stops propagation so it doesn't trigger tap-to-open */}
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onPointerUp={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); cyclePriority(idea.id); }}
           style={{
             width: 6, minHeight: 40, borderRadius: 3, flexShrink: 0,
             background: pri.color === "transparent" ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)") : pri.color,
@@ -385,9 +423,8 @@ export default function SpaghettiWall() {
             transition: "background 0.2s ease",
           }} />
 
-        {/* Content — tap to open */}
-        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
-          onClick={() => { setSelected(idea); setNoteInput(""); setEditingTitle(false); }}>
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 16, fontWeight: 500, color: t.text, lineHeight: 1.3,
             whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
@@ -419,16 +456,6 @@ export default function SpaghettiWall() {
             {(idea.attachments || []).length > 0 && <span style={{ fontSize: 11, color: t.textTertiary }}>📎{idea.attachments.length}</span>}
           </div>
         </div>
-
-        {/* Drag handle */}
-        <div
-          onPointerDown={e => { e.preventDefault(); onReorderStart(idea.id, filteredIdx, e.clientY); }}
-          onTouchStart={e => onReorderStart(idea.id, filteredIdx, e.touches[0].clientY)}
-          style={{
-            color: t.textTertiary, fontSize: 18, cursor: "grab",
-            padding: "8px 2px", userSelect: "none", touchAction: "none",
-            display: "flex", alignItems: "center",
-          }}>≡</div>
       </div>
     );
   };
