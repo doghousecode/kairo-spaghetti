@@ -1,17 +1,50 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "./supabase.js";
 
 // ─── Storage ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "kairo-sw-v1";
+const THEME_KEY = "kairo-theme";
 
 async function loadData() {
   try {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("ideas")
+        .select("data, position")
+        .order("position", { ascending: true });
+      if (!error && data) {
+        return {
+          ideas: data.map(r => r.data),
+          themeMode: localStorage.getItem(THEME_KEY) || "auto",
+        };
+      }
+    }
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch(e) { return null; }
 }
 
 async function saveData(d) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e) {}
+  try {
+    localStorage.setItem(THEME_KEY, d.themeMode);
+    if (supabase) {
+      if (d.ideas.length > 0) {
+        await supabase.from("ideas").upsert(
+          d.ideas.map((idea, position) => ({ id: idea.id, data: idea, position }))
+        );
+      }
+      // Delete any ideas removed from the list
+      const ids = d.ideas.map(i => i.id);
+      const deleteQuery = supabase.from("ideas").delete();
+      if (ids.length > 0) {
+        await deleteQuery.not("id", "in", `(${ids.map(id => `"${id}"`).join(",")})`);
+      } else {
+        await deleteQuery.neq("id", "");
+      }
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    }
+  } catch(e) {}
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────
@@ -88,10 +121,10 @@ export default function SpaghettiWall() {
     })();
   }, []);
 
-  // Save
+  // Save (debounced — waits 800ms after last change before syncing)
   useEffect(() => {
-    const d = { ideas, themeMode };
-    saveData(d);
+    const t = setTimeout(() => saveData({ ideas, themeMode }), 800);
+    return () => clearTimeout(t);
   }, [ideas, themeMode]);
 
   // Speech recognition
