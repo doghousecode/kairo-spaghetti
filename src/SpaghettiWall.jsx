@@ -192,7 +192,7 @@ export default function SpaghettiWall() {
     const el = headerRef.current;
     if (!el) return;
     setHeaderHeight(el.getBoundingClientRect().height);
-    const ro = new ResizeObserver(([e]) => setHeaderHeight(e.contentRect.height));
+    const ro = new ResizeObserver(() => setHeaderHeight(el.getBoundingClientRect().height));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -455,9 +455,8 @@ export default function SpaghettiWall() {
   const IdeaRow = ({ idea, idx, filteredIdx }) => {
     const isReordering = reorderingId === idea.id;
     const pri = getPriority(idea.priority);
-    const pressTimer = useRef(null);
-    const didDrag = useRef(false);
-    const pressY = useRef(0);
+    const hasMoved = useRef(false);
+    const downY = useRef(0);
 
     // Spring shift: slide other items out of the way while dragging
     let shift = 0;
@@ -468,40 +467,12 @@ export default function SpaghettiWall() {
       else if (s > tgt && filteredIdx >= tgt && filteredIdx < s) shift = rowHeight;
     }
 
-    const startPress = (clientY) => {
-      didDrag.current = false;
-      pressY.current = clientY;
-      clearTimeout(pressTimer.current);
-      pressTimer.current = setTimeout(() => {
-        didDrag.current = true;
-        navigator.vibrate?.(10);
-        onReorderStart(idea.id, filteredIdx, pressY.current);
-      }, 380);
-    };
-
-    const endPress = () => {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-      // Only open overlay on a clean tap — not after any kind of drag
-      if (!didDrag.current && reorderingId !== idea.id) {
-        setSelected(idea); setNoteInput(""); setEditingTitle(false);
-      }
-      didDrag.current = false;
-    };
-
-    const checkScrollCancel = (clientY) => {
-      if (pressTimer.current && !didDrag.current && Math.abs(clientY - pressY.current) > 8) {
-        clearTimeout(pressTimer.current);
-        pressTimer.current = null;
-      }
-    };
-
     return (
       <div
-        onPointerDown={e => startPress(e.clientY)}
-        onPointerUp={endPress}
-        onPointerCancel={() => { clearTimeout(pressTimer.current); didDrag.current = false; }}
-        onPointerMove={e => checkScrollCancel(e.clientY)}
+        onPointerDown={e => { hasMoved.current = false; downY.current = e.clientY; }}
+        onPointerMove={e => { if (Math.abs(e.clientY - downY.current) > 8) hasMoved.current = true; }}
+        onPointerUp={() => { if (!hasMoved.current && reorderingId !== idea.id) { setSelected(idea); setNoteInput(""); setEditingTitle(false); } }}
+        onPointerCancel={() => { hasMoved.current = true; }}
         style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "14px 16px",
@@ -701,7 +672,7 @@ export default function SpaghettiWall() {
         maxWidth: 680,
         margin: "0 auto",
         minHeight: "100vh",
-        padding: `${headerHeight + 8}px 8px 40px`,
+        padding: `${headerHeight + 16}px 8px 40px`,
       }}>
         {filtered.length === 0 && (
           <div style={{ padding: 60, textAlign: "center" }}>
