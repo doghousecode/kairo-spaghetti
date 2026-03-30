@@ -101,7 +101,6 @@ export default function SpaghettiWall() {
 
   useEffect(() => { selRef.current = selected; setSheetDY(0); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
-  useEffect(() => { reorderingRef.current = reorderingId; }, [reorderingId]);
 
   // Non-passive touchmove: prevent page scroll during drag (React's synthetic onTouchMove is passive)
   useEffect(() => {
@@ -313,6 +312,7 @@ export default function SpaghettiWall() {
   const reorderStartY = useRef(0);
   const reorderStartIdx = useRef(0);
   const rowHeight = 72;
+  useEffect(() => { reorderingRef.current = reorderingId; }, [reorderingId]);
 
   const onReorderStart = (id, filteredIdx, clientY) => {
     setReorderingId(id);
