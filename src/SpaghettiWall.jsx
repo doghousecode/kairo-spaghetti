@@ -18,26 +18,12 @@ async function saveData(d) {
 async function analyseIdea(text, existing) {
   const allTags = [...new Set(existing.flatMap(i => i.tags || []))];
   const context = existing.slice(-15).map((i, idx) => `[${idx}] "${i.title}" [${(i.tags||[]).join(",")}]`).join("\n");
-  
-  const headers = { "Content-Type": "application/json" };
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || null;
-  if (apiKey) {
-    headers["x-api-key"] = apiKey;
-    headers["anthropic-version"] = "2023-06-01";
-    headers["anthropic-dangerous-direct-browser-access"] = "true";
-  }
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST", headers,
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514", max_tokens: 800,
-        messages: [{ role: "user", content: `Analyse this idea. Return ONLY valid JSON, no markdown:
-{"title":"max 5 word title","tags":["tag1","tag2"],"insight":"one useful sentence","connections":[]}
-Rules: title=distil core concept. tags=2-4, reuse existing [${allTags.join(",")}] where relevant, lowercase hyphenated. connections=indices of related ideas (max 3). insight=sharp, useful.
-IDEA: "${text}"
-EXISTING:\n${context || "None"}` }],
-      }),
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, allTags, context }),
     });
     const d = await res.json();
     return JSON.parse((d.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim());
