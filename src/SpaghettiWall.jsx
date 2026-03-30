@@ -98,6 +98,7 @@ export default function SpaghettiWall() {
   const touchStartY = useRef(null);
   const containerRef = useRef(null);
   const reorderingRef = useRef(null);
+  const loadedRef = useRef(false);
 
   useEffect(() => { selRef.current = selected; setSheetDY(0); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
@@ -134,11 +135,14 @@ export default function SpaghettiWall() {
     (async () => {
       const d = await loadData();
       if (d) { setIdeas(d.ideas || []); setThemeMode(d.themeMode || "auto"); }
+      loadedRef.current = true; // guard: don't save until we've loaded
     })();
   }, []);
 
   // Save (debounced — waits 800ms after last change before syncing)
+  // loadedRef guard prevents wiping data before initial load completes
   useEffect(() => {
+    if (!loadedRef.current) return;
     const t = setTimeout(() => saveData({ ideas, themeMode }), 800);
     return () => clearTimeout(t);
   }, [ideas, themeMode]);
@@ -498,8 +502,12 @@ export default function SpaghettiWall() {
           </div>
         </div>
 
-        {/* Drag handle — visual cue only, whole row handles the long-press drag */}
-        <div style={{ color: t.textTertiary, fontSize: 16, paddingLeft: 4, flexShrink: 0, pointerEvents: "none", opacity: 0.5 }}>⠿</div>
+        {/* Drag handle — touch here to reorder immediately (no long-press needed) */}
+        <div
+          onPointerDown={e => { e.stopPropagation(); onReorderStart(idea.id, filteredIdx, e.clientY); }}
+          style={{ color: t.textTertiary, fontSize: 18, padding: "4px 4px 4px 8px", flexShrink: 0,
+            opacity: 0.5, touchAction: "none", cursor: "grab" }}
+        >⠿</div>
       </div>
     );
   };
@@ -722,33 +730,36 @@ export default function SpaghettiWall() {
         <div className="modal-overlay" onClick={() => { if (!sheetDragActive.current) setSelected(null); }}
           style={{ position: "fixed", inset: 0, background: t.backdrop, backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}
-            onPointerDown={e => { e.stopPropagation(); sheetDragStartY.current = e.clientY; sheetDragActive.current = false; }}
-            onPointerMove={e => {
-              e.stopPropagation();
-              const dy = e.clientY - sheetDragStartY.current;
-              const atTop = !sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0;
-              if (!sheetDragActive.current && dy > 6 && atTop) sheetDragActive.current = true;
-              if (sheetDragActive.current) setSheetDY(Math.max(0, dy));
-            }}
-            onPointerUp={e => {
-              e.stopPropagation();
-              if (sheetDY > 120) { setSelected(null); } else { setSheetDY(0); }
-              sheetDragActive.current = false;
-            }}
-            onPointerCancel={e => { e.stopPropagation(); setSheetDY(0); sheetDragActive.current = false; }}
             style={{
               width: "100%", maxWidth: 680,
               background: t.bgElevated, borderRadius: "16px 16px 0 0",
-              padding: "8px 0 0", boxShadow: "0 -4px 32px rgba(0,0,0,0.15)",
+              padding: "0 0 0", boxShadow: "0 -4px 32px rgba(0,0,0,0.15)",
               maxHeight: "90vh",
               transform: `translateY(${sheetDY}px)`,
-              transition: sheetDragActive.current ? "none" : "transform 0.35s cubic-bezier(0.32, 0, 0.67, 0)",
-              touchAction: "pan-y",
+              transition: sheetDY > 0 ? "none" : "transform 0.35s cubic-bezier(0.32, 0, 0.67, 0)",
             }}>
-            {/* Handle — always draggable */}
-            <div style={{ width: 36, height: 5, borderRadius: 3, background: t.textTertiary, margin: "0 auto 8px", cursor: "grab" }} />
+            {/* Handle — drag this to dismiss */}
+            <div
+              onPointerDown={e => { e.stopPropagation(); sheetDragStartY.current = e.clientY; sheetDragActive.current = false; }}
+              onPointerMove={e => {
+                e.stopPropagation();
+                const dy = e.clientY - sheetDragStartY.current;
+                if (!sheetDragActive.current && dy > 4) sheetDragActive.current = true;
+                if (sheetDragActive.current) setSheetDY(Math.max(0, dy));
+              }}
+              onPointerUp={e => {
+                e.stopPropagation();
+                if (sheetDY > 100) { setSelected(null); } else { setSheetDY(0); }
+                sheetDragActive.current = false;
+              }}
+              onPointerCancel={e => { e.stopPropagation(); setSheetDY(0); sheetDragActive.current = false; }}
+              style={{ width: "100%", padding: "12px 0 8px", display: "flex", justifyContent: "center",
+                touchAction: "none", cursor: "grab" }}
+            >
+              <div style={{ width: 36, height: 5, borderRadius: 3, background: t.textTertiary }} />
+            </div>
 
-            <div ref={sheetScrollRef} style={{ padding: "0 20px 24px", overflowY: "auto", maxHeight: "calc(90vh - 24px)" }}>
+            <div ref={sheetScrollRef} style={{ padding: "0 20px 24px", overflowY: "auto", maxHeight: "calc(90vh - 24px)", touchAction: "pan-y" }}>
               {/* Title */}
               {editingTitle ? (
                 <div style={{ marginBottom: 12 }}>
