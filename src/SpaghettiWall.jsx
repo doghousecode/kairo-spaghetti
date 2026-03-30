@@ -415,7 +415,8 @@ export default function SpaghettiWall() {
     const endPress = () => {
       clearTimeout(pressTimer.current);
       pressTimer.current = null;
-      if (!didDrag.current) {
+      // Only open overlay on a clean tap — not after any kind of drag
+      if (!didDrag.current && reorderingId !== idea.id) {
         setSelected(idea); setNoteInput(""); setEditingTitle(false);
       }
       didDrag.current = false;
@@ -505,8 +506,6 @@ export default function SpaghettiWall() {
         {/* Drag handle — touch here to reorder immediately (no long-press needed) */}
         <div
           onPointerDown={e => { e.stopPropagation(); onReorderStart(idea.id, filteredIdx, e.clientY); }}
-          onPointerUp={e => e.stopPropagation()}
-          onPointerCancel={e => e.stopPropagation()}
           style={{ color: t.textTertiary, fontSize: 18, padding: "4px 4px 4px 8px", flexShrink: 0,
             opacity: 0.5, touchAction: "none", cursor: "grab" }}
         >⠿</div>
@@ -517,7 +516,6 @@ export default function SpaghettiWall() {
   return (
     <div
       ref={containerRef}
-      className={isSpaghetti ? "spaghetti-bg" : undefined}
       onPointerMove={e => onReorderMove(e.clientY)}
       onPointerUp={onReorderEnd}
       onPointerCancel={onReorderEnd}
@@ -526,14 +524,24 @@ export default function SpaghettiWall() {
       onTouchCancel={onReorderEnd}
       style={{
         fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif",
-        background: isSpaghetti ? undefined : t.bg,
-        backgroundImage: isSpaghetti ? spaghettiWallpaper : undefined,
-        backgroundSize: isSpaghetti ? "cover" : undefined,
-        backgroundPosition: isSpaghetti ? "center" : undefined,
-        color: t.text, minHeight: "100vh",
+        color: t.text, minHeight: "100vh", position: "relative",
         WebkitFontSmoothing: "antialiased",
         touchAction: reorderingId ? "none" : undefined,
       }}>
+
+      {/* ─── Static wallpaper — truly fixed, nothing can scroll or drag it ─── */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+        background: t.bg,
+        backgroundImage: isSpaghetti ? spaghettiWallpaper : undefined,
+        backgroundSize: isSpaghetti ? "cover" : undefined,
+        backgroundPosition: isSpaghetti ? "center" : undefined,
+        transition: "background 0.3s ease",
+      }} className={isSpaghetti ? "spaghetti-wallpaper" : undefined} />
+
+      {/* ─── Scrollable content sits above the fixed wallpaper ─── */}
+      <div style={{ position: "relative", zIndex: 1 }}>
+
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 0; }
@@ -541,7 +549,7 @@ export default function SpaghettiWall() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); } }
-        @media (max-width: 768px) { .spaghetti-bg { background-size: 300% !important; background-position: center 40% !important; background-attachment: scroll !important; } }
+        @media (max-width: 768px) { .spaghetti-wallpaper { background-size: 300% !important; background-position: center 40% !important; } }
         .idea-row:hover { background: ${isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"} !important; }
         .idea-row:active { background: ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)"} !important; }
         .btn-secondary { transition: all 0.15s ease; }
@@ -948,6 +956,7 @@ export default function SpaghettiWall() {
           </div>
         </div>
       ))()}
+      </div>{/* end scrollable content */}
     </div>
   );
 }
