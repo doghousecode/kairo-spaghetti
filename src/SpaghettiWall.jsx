@@ -69,6 +69,10 @@ export default function SpaghettiWall() {
   const [input, setInput] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
+  const [sheetDY, setSheetDY] = useState(0);
+  const sheetDragActive = useRef(false);
+  const sheetDragStartY = useRef(0);
+  const sheetScrollRef = useRef(null);
   const [analysing, setAnalysing] = useState(false);
   const [selected, setSelected] = useState(null);
   const [searchQ, setSearchQ] = useState("");
@@ -90,7 +94,7 @@ export default function SpaghettiWall() {
   const ideasRef = useRef([]);
   const touchStartY = useRef(null);
 
-  useEffect(() => { selRef.current = selected; }, [selected]);
+  useEffect(() => { selRef.current = selected; setSheetDY(0); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
 
   // System theme listener
@@ -226,13 +230,15 @@ export default function SpaghettiWall() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
+        .find(t => MediaRecorder.isTypeSupported(t)) || '';
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       chunksRef.current = [];
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
         if (!chunksRef.current.length) return;
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         const data = await readFile(blob);
         const sel = selRef.current;
         if (sel) {
@@ -672,18 +678,34 @@ export default function SpaghettiWall() {
 
       {/* ─── Detail Sheet ─── */}
       {selected && (() => (
-        <div className="modal-overlay" onClick={() => setSelected(null)}
+        <div className="modal-overlay" onClick={() => { if (!sheetDragActive.current) setSelected(null); }}
           style={{ position: "fixed", inset: 0, background: t.backdrop, backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{
-            width: "100%", maxWidth: 680,
-            background: t.bgElevated, borderRadius: "16px 16px 0 0",
-            padding: "8px 0 0", boxShadow: "0 -4px 32px rgba(0,0,0,0.15)",
-            maxHeight: "90vh", overflow: "auto",
-          }}>
-            {/* Handle */}
-            <div style={{ width: 36, height: 5, borderRadius: 3, background: t.textTertiary, margin: "0 auto 8px" }} />
+          <div className="modal-content" onClick={e => e.stopPropagation()}
+            onPointerDown={e => { sheetDragStartY.current = e.clientY; sheetDragActive.current = false; }}
+            onPointerMove={e => {
+              const dy = e.clientY - sheetDragStartY.current;
+              const atTop = !sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0;
+              if (!sheetDragActive.current && dy > 6 && atTop) sheetDragActive.current = true;
+              if (sheetDragActive.current) setSheetDY(Math.max(0, dy));
+            }}
+            onPointerUp={() => {
+              if (sheetDY > 120) { setSelected(null); } else { setSheetDY(0); }
+              sheetDragActive.current = false;
+            }}
+            onPointerCancel={() => { setSheetDY(0); sheetDragActive.current = false; }}
+            style={{
+              width: "100%", maxWidth: 680,
+              background: t.bgElevated, borderRadius: "16px 16px 0 0",
+              padding: "8px 0 0", boxShadow: "0 -4px 32px rgba(0,0,0,0.15)",
+              maxHeight: "90vh",
+              transform: `translateY(${sheetDY}px)`,
+              transition: sheetDragActive.current ? "none" : "transform 0.35s cubic-bezier(0.32, 0, 0.67, 0)",
+              touchAction: "pan-y",
+            }}>
+            {/* Handle — always draggable */}
+            <div style={{ width: 36, height: 5, borderRadius: 3, background: t.textTertiary, margin: "0 auto 8px", cursor: "grab" }} />
 
-            <div style={{ padding: "0 20px 24px" }}>
+            <div ref={sheetScrollRef} style={{ padding: "0 20px 24px", overflowY: "auto", maxHeight: "calc(90vh - 24px)" }}>
               {/* Title */}
               {editingTitle ? (
                 <div style={{ marginBottom: 12 }}>
