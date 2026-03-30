@@ -72,6 +72,7 @@ export default function SpaghettiWall() {
   const [kbOffset, setKbOffset] = useState(0);
   const [sheetDY, setSheetDY] = useState(0);
   const sheetDragActive = useRef(false);
+  const sheetDragReady = useRef(false);
   const sheetDragStartY = useRef(0);
   const sheetScrollRef = useRef(null);
   const [analysing, setAnalysing] = useState(false);
@@ -129,6 +130,18 @@ export default function SpaghettiWall() {
     vv.addEventListener("scroll", handler);
     return () => { vv.removeEventListener("resize", handler); vv.removeEventListener("scroll", handler); };
   }, []);
+
+  // Block page scroll/interaction behind overlay when it's open
+  useEffect(() => {
+    if (!selected) return;
+    const handler = (e) => {
+      // Allow scroll inside the sheet's scroll area
+      if (sheetScrollRef.current?.contains(e.target)) return;
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', handler, { passive: false });
+    return () => document.removeEventListener('touchmove', handler);
+  }, [selected]);
 
   // Load
   useEffect(() => {
@@ -738,8 +751,42 @@ export default function SpaghettiWall() {
       {/* ─── Detail Sheet ─── */}
       {selected && (() => (
         <div className="modal-overlay" onClick={() => { if (!sheetDragActive.current) setSelected(null); }}
+          onPointerDown={e => e.stopPropagation()}
           style={{ position: "fixed", inset: 0, background: t.backdrop, backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}
+            onPointerDown={e => {
+              e.stopPropagation();
+              const tag = e.target.tagName.toLowerCase();
+              // Don't start sheet drag when touching interactive elements
+              if (['input','button','textarea','audio','select'].includes(tag)) {
+                sheetDragReady.current = false;
+                return;
+              }
+              e.currentTarget.setPointerCapture(e.pointerId);
+              sheetDragReady.current = true;
+              sheetDragStartY.current = e.clientY;
+              sheetDragActive.current = false;
+            }}
+            onPointerMove={e => {
+              e.stopPropagation();
+              if (!sheetDragReady.current) return;
+              const dy = e.clientY - sheetDragStartY.current;
+              const atTop = !sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0;
+              if (!sheetDragActive.current && dy > 6 && atTop) sheetDragActive.current = true;
+              if (sheetDragActive.current) setSheetDY(Math.max(0, dy));
+            }}
+            onPointerUp={e => {
+              e.stopPropagation();
+              sheetDragReady.current = false;
+              if (sheetDY > 100) { setSelected(null); } else { setSheetDY(0); }
+              sheetDragActive.current = false;
+            }}
+            onPointerCancel={e => {
+              e.stopPropagation();
+              sheetDragReady.current = false;
+              setSheetDY(0);
+              sheetDragActive.current = false;
+            }}
             style={{
               width: "100%", maxWidth: 680,
               background: t.bgElevated, borderRadius: "16px 16px 0 0",
@@ -748,24 +795,8 @@ export default function SpaghettiWall() {
               transform: `translateY(${sheetDY}px)`,
               transition: sheetDY > 0 ? "none" : "transform 0.35s cubic-bezier(0.32, 0, 0.67, 0)",
             }}>
-            {/* Handle — drag this to dismiss */}
-            <div
-              onPointerDown={e => { e.stopPropagation(); e.currentTarget.setPointerCapture(e.pointerId); sheetDragStartY.current = e.clientY; sheetDragActive.current = false; }}
-              onPointerMove={e => {
-                e.stopPropagation();
-                const dy = e.clientY - sheetDragStartY.current;
-                if (!sheetDragActive.current && dy > 4) sheetDragActive.current = true;
-                if (sheetDragActive.current) setSheetDY(Math.max(0, dy));
-              }}
-              onPointerUp={e => {
-                e.stopPropagation();
-                if (sheetDY > 100) { setSelected(null); } else { setSheetDY(0); }
-                sheetDragActive.current = false;
-              }}
-              onPointerCancel={e => { e.stopPropagation(); setSheetDY(0); sheetDragActive.current = false; }}
-              style={{ width: "100%", padding: "12px 0 8px", display: "flex", justifyContent: "center",
-                touchAction: "none", cursor: "grab" }}
-            >
+            {/* Handle — visual indicator */}
+            <div style={{ width: "100%", padding: "12px 0 8px", display: "flex", justifyContent: "center", cursor: "grab" }}>
               <div style={{ width: 36, height: 5, borderRadius: 3, background: t.textTertiary }} />
             </div>
 
