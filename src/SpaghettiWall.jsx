@@ -91,6 +91,8 @@ export default function SpaghettiWall() {
   const recogRef = useRef(null);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
+  const voiceRecogRef = useRef(null);
+  const voiceTranscriptRef = useRef("");
   const selRef = useRef(null);
   const ideasRef = useRef([]);
   const touchStartY = useRef(null);
@@ -247,24 +249,44 @@ export default function SpaghettiWall() {
         .find(t => MediaRecorder.isTypeSupported(t)) || '';
       const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       chunksRef.current = [];
+      voiceTranscriptRef.current = "";
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
+        voiceRecogRef.current?.stop(); voiceRecogRef.current = null;
         if (!chunksRef.current.length) return;
         const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         const data = await readFile(blob);
         const sel = selRef.current;
+        const transcript = voiceTranscriptRef.current.trim();
         if (sel) {
           const idea = ideasRef.current.find(i => i.id === sel.id);
-          if (idea) updateIdea(sel.id, { attachments: [...(idea.attachments || []), { type: "voice", data, at: new Date().toISOString() }] });
+          if (idea) {
+            const updates = { attachments: [...(idea.attachments || []), { type: "voice", data, at: new Date().toISOString() }] };
+            if (transcript) updates.notes = [...(idea.notes || []), { text: `🎙️ ${transcript}`, at: new Date().toISOString() }];
+            updateIdea(sel.id, updates);
+          }
         }
       };
+      // Run SpeechRecognition in parallel for live transcript
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        const vr = new SR();
+        vr.continuous = true; vr.interimResults = false; vr.lang = "en-GB";
+        vr.onresult = (e) => {
+          let t = "";
+          for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript + " ";
+          voiceTranscriptRef.current = t.trim();
+        };
+        try { vr.start(); voiceRecogRef.current = vr; } catch(_) {}
+      }
       mr.start(); mediaRef.current = mr; setRecording(true);
     } catch(e) { alert("Microphone access denied."); }
   };
 
   const stopRecording = () => {
     if (mediaRef.current?.state !== "inactive") mediaRef.current?.stop();
+    voiceRecogRef.current?.stop(); voiceRecogRef.current = null;
     setRecording(false);
   };
 
