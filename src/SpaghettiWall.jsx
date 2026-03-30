@@ -68,6 +68,7 @@ export default function SpaghettiWall() {
   const [themeMode, setThemeMode] = useState("auto"); // light|dark|auto|spaghetti
   const [input, setInput] = useState("");
   const [capturing, setCapturing] = useState(false);
+  const [kbOffset, setKbOffset] = useState(0);
   const [analysing, setAnalysing] = useState(false);
   const [selected, setSelected] = useState(null);
   const [searchQ, setSearchQ] = useState("");
@@ -98,6 +99,16 @@ export default function SpaghettiWall() {
     const handler = (e) => setSystemDark(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Visual viewport — push capture sheet above keyboard on iOS
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handler = () => setKbOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    vv.addEventListener("resize", handler);
+    vv.addEventListener("scroll", handler);
+    return () => { vv.removeEventListener("resize", handler); vv.removeEventListener("scroll", handler); };
   }, []);
 
   // Load
@@ -257,29 +268,38 @@ export default function SpaghettiWall() {
   // ─── Pointer-based drag reorder ─────────────────────────────────────
   const [reorderingId, setReorderingId] = useState(null);
   const [reorderY, setReorderY] = useState(0);
+  const [reorderTargetIdx, setReorderTargetIdx] = useState(null);
   const reorderStartY = useRef(0);
   const reorderStartIdx = useRef(0);
   const rowHeight = 72;
 
-  const onReorderStart = (id, idx, clientY) => {
+  const onReorderStart = (id, filteredIdx, clientY) => {
     setReorderingId(id);
     reorderStartY.current = clientY;
-    reorderStartIdx.current = idx;
+    reorderStartIdx.current = filteredIdx;
     setReorderY(0);
+    setReorderTargetIdx(filteredIdx);
   };
 
   const onReorderMove = (clientY) => {
     if (reorderingId === null) return;
-    setReorderY(clientY - reorderStartY.current);
+    const dy = clientY - reorderStartY.current;
+    setReorderY(dy);
+    setReorderTargetIdx(idx => {
+      const next = Math.max(0, Math.min(filtered.length - 1, reorderStartIdx.current + Math.round(dy / rowHeight)));
+      return next;
+    });
   };
 
   const onReorderEnd = () => {
     if (reorderingId === null) return;
-    const offset = Math.round(reorderY / rowHeight);
-    if (offset !== 0) {
+    const startFIdx = reorderStartIdx.current;
+    const endFIdx = reorderTargetIdx ?? startFIdx;
+    if (endFIdx !== startFIdx) {
       setIdeas(prev => {
         const fromIdx = prev.findIndex(i => i.id === reorderingId);
         if (fromIdx === -1) return prev;
+        const offset = endFIdx - startFIdx;
         const toIdx = Math.max(0, Math.min(prev.length - 1, fromIdx + offset));
         if (fromIdx === toIdx) return prev;
         const next = [...prev];
@@ -290,6 +310,7 @@ export default function SpaghettiWall() {
     }
     setReorderingId(null);
     setReorderY(0);
+    setReorderTargetIdx(null);
   };
 
   // Priority helpers
@@ -319,9 +340,18 @@ export default function SpaghettiWall() {
   });
 
   // ─── Render ────────────────────────────────────────────────────────
-  const IdeaRow = ({ idea, idx }) => {
+  const IdeaRow = ({ idea, idx, filteredIdx }) => {
     const isReordering = reorderingId === idea.id;
     const pri = getPriority(idea.priority);
+
+    // Spring shift: slide other items out of the way while dragging
+    let shift = 0;
+    if (reorderingId && !isReordering && reorderTargetIdx !== null) {
+      const s = reorderStartIdx.current;
+      const t2 = reorderTargetIdx;
+      if (s < t2 && filteredIdx > s && filteredIdx <= t2) shift = -rowHeight;
+      else if (s > t2 && filteredIdx >= t2 && filteredIdx < s) shift = rowHeight;
+    }
 
     return (
       <div
@@ -329,8 +359,8 @@ export default function SpaghettiWall() {
           display: "flex", alignItems: "center", gap: 12,
           padding: "14px 16px",
           borderBottom: isSpaghetti ? "none" : `0.5px solid ${t.separator}`,
-          transition: isReordering ? "none" : "transform 0.2s ease, background 0.15s ease",
-          transform: isReordering ? `translateY(${reorderY}px)` : "none",
+          transition: isReordering ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease",
+          transform: isReordering ? `translateY(${reorderY}px)` : shift ? `translateY(${shift}px)` : "none",
           zIndex: isReordering ? 100 : 1,
           position: "relative",
           marginBottom: isSpaghetti ? 6 : 0,
@@ -392,8 +422,8 @@ export default function SpaghettiWall() {
 
         {/* Drag handle */}
         <div
-          onPointerDown={e => { e.preventDefault(); onReorderStart(idea.id, idx, e.clientY); }}
-          onTouchStart={e => onReorderStart(idea.id, idx, e.touches[0].clientY)}
+          onPointerDown={e => { e.preventDefault(); onReorderStart(idea.id, filteredIdx, e.clientY); }}
+          onTouchStart={e => onReorderStart(idea.id, filteredIdx, e.touches[0].clientY)}
           style={{
             color: t.textTertiary, fontSize: 18, cursor: "grab",
             padding: "8px 2px", userSelect: "none", touchAction: "none",
@@ -524,9 +554,9 @@ export default function SpaghettiWall() {
         )}
 
         {/* Active ideas */}
-        {filtered.map((idea, idx) => (
+        {filtered.map((idea, filteredIdx) => (
           <div key={idea.id} className="idea-row">
-            <IdeaRow idea={idea} idx={ideas.indexOf(idea)} />
+            <IdeaRow idea={idea} idx={ideas.indexOf(idea)} filteredIdx={filteredIdx} />
           </div>
         ))}
 
@@ -548,7 +578,7 @@ export default function SpaghettiWall() {
       {/* ─── Capture Sheet ─── */}
       {capturing && (
         <div className="modal-overlay" onClick={() => { if (!analysing) setCapturing(false); }}
-          style={{ position: "fixed", inset: 0, background: t.backdrop, backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, padding: "0 0 0 0" }}>
+          style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: kbOffset, background: t.backdrop, backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{
             width: "100%", maxWidth: 680,
             background: t.bgElevated, borderRadius: "16px 16px 0 0",
@@ -563,7 +593,7 @@ export default function SpaghettiWall() {
 
               <textarea value={input} onChange={e => setInput(e.target.value)}
                 placeholder="What's on your mind? Type a quick thought or a long ramble..."
-                autoFocus disabled={analysing}
+                disabled={analysing}
                 onKeyDown={e => { if (e.key === "Enter" && e.metaKey) submitIdea(); }}
                 style={{
                   width: "100%", minHeight: 100, padding: 14, borderRadius: 12, border: "none",
