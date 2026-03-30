@@ -100,6 +100,8 @@ export default function SpaghettiWall() {
   const containerRef = useRef(null);
   const reorderingRef = useRef(null);
   const loadedRef = useRef(false);
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(120);
 
   useEffect(() => { selRef.current = selected; setSheetDY(0); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
@@ -131,17 +133,25 @@ export default function SpaghettiWall() {
     return () => { vv.removeEventListener("resize", handler); vv.removeEventListener("scroll", handler); };
   }, []);
 
-  // Block page scroll/interaction behind overlay when it's open
+  // Lock body scroll behind overlay (iOS-safe: position:fixed trick)
   useEffect(() => {
     if (!selected) return;
-    const handler = (e) => {
-      // Allow scroll inside the sheet's scroll area
-      if (sheetScrollRef.current?.contains(e.target)) return;
-      e.preventDefault();
+    const y = window.scrollY;
+    Object.assign(document.body.style, { position: 'fixed', top: `-${y}px`, width: '100%', overflowY: 'scroll' });
+    return () => {
+      Object.assign(document.body.style, { position: '', top: '', width: '', overflowY: '' });
+      window.scrollTo(0, y);
     };
-    document.addEventListener('touchmove', handler, { passive: false });
-    return () => document.removeEventListener('touchmove', handler);
   }, [selected]);
+
+  // Track header height for content offset
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setHeaderHeight(e.contentRect.height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Load
   useEffect(() => {
@@ -451,18 +461,21 @@ export default function SpaghettiWall() {
         style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "14px 16px",
-          borderBottom: isSpaghetti ? "none" : `0.5px solid ${t.separator}`,
-          transition: isReordering ? "none" : "transform 0.3s cubic-bezier(0.34, 2.4, 0.64, 1), background 0.15s ease",
+          transition: isReordering ? "none" : "transform 0.3s cubic-bezier(0.34, 2.4, 0.64, 1), box-shadow 0.15s ease",
           transform: isReordering ? `translateY(${reorderY}px)` : shift ? `translateY(${shift}px)` : "none",
           zIndex: isReordering ? 100 : 1,
           position: "relative",
-          marginBottom: isSpaghetti ? 6 : 0,
+          marginBottom: 8,
           background: isSpaghetti
             ? "rgba(20,20,20,0.62)"
-            : isReordering ? (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)") : "transparent",
-          borderRadius: isSpaghetti ? 12 : isReordering ? 12 : 0,
-          border: isSpaghetti ? "1px solid rgba(255,255,255,0.13)" : "none",
-          boxShadow: isSpaghetti ? "0 2px 12px rgba(0,0,0,0.35)" : isReordering ? "0 8px 24px rgba(0,0,0,0.15)" : "none",
+            : isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.88)",
+          borderRadius: 12,
+          border: isSpaghetti
+            ? "1px solid rgba(255,255,255,0.13)"
+            : isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.07)",
+          boxShadow: isReordering
+            ? "0 8px 24px rgba(0,0,0,0.18)"
+            : isSpaghetti ? "0 2px 12px rgba(0,0,0,0.35)" : isDark ? "none" : "0 1px 3px rgba(0,0,0,0.05)",
           backdropFilter: isSpaghetti ? "blur(6px)" : "none",
           WebkitBackdropFilter: isSpaghetti ? "blur(6px)" : "none",
           userSelect: "none", WebkitUserSelect: "none",
@@ -542,14 +555,13 @@ export default function SpaghettiWall() {
         touchAction: reorderingId ? "none" : undefined,
       }}>
 
-      {/* ─── Static wallpaper — truly fixed, nothing can scroll or drag it ─── */}
+      {/* ─── Static wallpaper — truly fixed, never moves ─── */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
         background: t.bg,
         backgroundImage: isSpaghetti ? spaghettiWallpaper : undefined,
         backgroundSize: isSpaghetti ? "cover" : undefined,
         backgroundPosition: isSpaghetti ? "center" : undefined,
-        transition: "background 0.3s ease",
       }} className={isSpaghetti ? "spaghetti-wallpaper" : undefined} />
 
       {/* ─── Scrollable content sits above the fixed wallpaper ─── */}
@@ -563,8 +575,8 @@ export default function SpaghettiWall() {
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); } }
         @media (max-width: 768px) { .spaghetti-wallpaper { background-size: 300% !important; background-position: center 40% !important; } }
-        .idea-row:hover { background: ${isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"} !important; }
-        .idea-row:active { background: ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)"} !important; }
+        .idea-row:hover { filter: brightness(${isDark ? "1.12" : "0.97"}); }
+        .idea-row:active { filter: brightness(${isDark ? "1.18" : "0.94"}); }
         .btn-secondary { transition: all 0.15s ease; }
         .btn-secondary:hover { opacity: 0.8; }
         .btn-secondary:active { transform: scale(0.97); }
@@ -573,12 +585,12 @@ export default function SpaghettiWall() {
         .recording-indicator { animation: recording-pulse 1.5s ease infinite; }
       `}</style>
 
-      {/* ─── Header ─── */}
-      <header style={{
+      {/* ─── Header — fixed, never scrolls ─── */}
+      <header ref={headerRef} style={{
         padding: "20px 20px 12px",
-        background: isSpaghetti ? "rgba(0,0,0,0.65)" : isDark ? "rgba(0,0,0,0.85)" : "rgba(242,242,247,0.85)",
+        background: isSpaghetti ? "rgba(0,0,0,0.65)" : isDark ? "rgba(0,0,0,0.85)" : "rgba(242,242,247,0.92)",
         backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-        position: "sticky", top: 0, zIndex: 50,
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
         borderBottom: `0.5px solid ${t.separator}`,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -643,12 +655,9 @@ export default function SpaghettiWall() {
       {/* ─── Idea List ─── */}
       <main style={{
         maxWidth: 680,
-        background: isSpaghetti ? "rgba(0,0,0,0.10)" : t.bgSecondary,
-        borderRadius: isSpaghetti ? 16 : 0,
-        margin: isSpaghetti ? "12px auto" : "0 auto",
-        overflow: "hidden",
-        minHeight: "calc(100vh - 160px)",
-        padding: isSpaghetti ? "6px 8px" : 0,
+        margin: "0 auto",
+        minHeight: "100vh",
+        padding: `${headerHeight + 8}px 8px 40px`,
       }}>
         {filtered.length === 0 && (
           <div style={{ padding: 60, textAlign: "center" }}>
