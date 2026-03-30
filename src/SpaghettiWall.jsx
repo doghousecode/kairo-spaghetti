@@ -20,18 +20,19 @@ async function loadData() {
 }
 
 async function saveData(d) {
+  // Always save locally first — data survives server failures and fast refreshes
   try {
     localStorage.setItem(THEME_KEY, d.themeMode);
-    const res = await fetch("/api/ideas", {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+  } catch(_) {}
+  // Then sync to server
+  try {
+    await fetch("/api/ideas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ideas: d.ideas, themeMode: d.themeMode }),
     });
-    if (!res.ok) throw new Error();
-  } catch(e) {
-    // Fallback to localStorage
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(_) {}
-  }
+  } catch(_) {}
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────
@@ -93,9 +94,21 @@ export default function SpaghettiWall() {
   const selRef = useRef(null);
   const ideasRef = useRef([]);
   const touchStartY = useRef(null);
+  const containerRef = useRef(null);
+  const reorderingRef = useRef(null);
 
   useEffect(() => { selRef.current = selected; setSheetDY(0); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
+  useEffect(() => { reorderingRef.current = reorderingId; }, [reorderingId]);
+
+  // Non-passive touchmove: prevent page scroll during drag (React's synthetic onTouchMove is passive)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e) => { if (reorderingRef.current) e.preventDefault(); };
+    el.addEventListener('touchmove', handler, { passive: false });
+    return () => el.removeEventListener('touchmove', handler);
+  }, []);
 
   // System theme listener
   useEffect(() => {
@@ -462,12 +475,16 @@ export default function SpaghettiWall() {
             {(idea.attachments || []).length > 0 && <span style={{ fontSize: 11, color: t.textTertiary }}>📎{idea.attachments.length}</span>}
           </div>
         </div>
+
+        {/* Drag handle — visual cue only, whole row handles the long-press drag */}
+        <div style={{ color: t.textTertiary, fontSize: 16, paddingLeft: 4, flexShrink: 0, pointerEvents: "none", opacity: 0.5 }}>⠿</div>
       </div>
     );
   };
 
   return (
     <div
+      ref={containerRef}
       className={isSpaghetti ? "spaghetti-bg" : undefined}
       onPointerMove={e => onReorderMove(e.clientY)}
       onPointerUp={onReorderEnd}
@@ -481,7 +498,6 @@ export default function SpaghettiWall() {
         backgroundImage: isSpaghetti ? spaghettiWallpaper : undefined,
         backgroundSize: isSpaghetti ? "cover" : undefined,
         backgroundPosition: isSpaghetti ? "center" : undefined,
-        backgroundAttachment: isSpaghetti ? "fixed" : undefined,
         color: t.text, minHeight: "100vh",
         WebkitFontSmoothing: "antialiased",
         touchAction: reorderingId ? "none" : undefined,
@@ -512,7 +528,7 @@ export default function SpaghettiWall() {
         position: "sticky", top: 0, zIndex: 50,
         borderBottom: `0.5px solid ${t.separator}`,
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
           <div>
             <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.5px", color: t.text, lineHeight: 1.1 }}>Spaghetti Wall</h1>
             <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 3 }}>Throw some ideas, see what sticks</div>
@@ -684,18 +700,20 @@ export default function SpaghettiWall() {
         <div className="modal-overlay" onClick={() => { if (!sheetDragActive.current) setSelected(null); }}
           style={{ position: "fixed", inset: 0, background: t.backdrop, backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}
-            onPointerDown={e => { sheetDragStartY.current = e.clientY; sheetDragActive.current = false; }}
+            onPointerDown={e => { e.stopPropagation(); sheetDragStartY.current = e.clientY; sheetDragActive.current = false; }}
             onPointerMove={e => {
+              e.stopPropagation();
               const dy = e.clientY - sheetDragStartY.current;
               const atTop = !sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0;
               if (!sheetDragActive.current && dy > 6 && atTop) sheetDragActive.current = true;
               if (sheetDragActive.current) setSheetDY(Math.max(0, dy));
             }}
-            onPointerUp={() => {
+            onPointerUp={e => {
+              e.stopPropagation();
               if (sheetDY > 120) { setSelected(null); } else { setSheetDY(0); }
               sheetDragActive.current = false;
             }}
-            onPointerCancel={() => { setSheetDY(0); sheetDragActive.current = false; }}
+            onPointerCancel={e => { e.stopPropagation(); setSheetDY(0); sheetDragActive.current = false; }}
             style={{
               width: "100%", maxWidth: 680,
               background: t.bgElevated, borderRadius: "16px 16px 0 0",
