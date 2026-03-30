@@ -505,7 +505,7 @@ export default function SpaghettiWall() {
 
         {/* Drag handle — touch here to reorder immediately (no long-press needed) */}
         <div
-          onPointerDown={e => { e.stopPropagation(); onReorderStart(idea.id, filteredIdx, e.clientY); }}
+          onPointerDown={e => { e.stopPropagation(); e.currentTarget.setPointerCapture(e.pointerId); onReorderStart(idea.id, filteredIdx, e.clientY); }}
           style={{ color: t.textTertiary, fontSize: 18, padding: "4px 4px 4px 8px", flexShrink: 0,
             opacity: 0.5, touchAction: "none", cursor: "grab" }}
         >⠿</div>
@@ -750,7 +750,7 @@ export default function SpaghettiWall() {
             }}>
             {/* Handle — drag this to dismiss */}
             <div
-              onPointerDown={e => { e.stopPropagation(); sheetDragStartY.current = e.clientY; sheetDragActive.current = false; }}
+              onPointerDown={e => { e.stopPropagation(); e.currentTarget.setPointerCapture(e.pointerId); sheetDragStartY.current = e.clientY; sheetDragActive.current = false; }}
               onPointerMove={e => {
                 e.stopPropagation();
                 const dy = e.clientY - sheetDragStartY.current;
