@@ -39,8 +39,8 @@ function tagColor(tag) {
   return TAG_PALETTE[Math.abs(h) % TAG_PALETTE.length];
 }
 
-// ─── Spaghetti wallpaper (tiny inline data — just a repeating CSS pattern to evoke it) ─────
-const spaghettiWallpaper = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23C62D1F' width='200' height='200'/%3E%3Cg opacity='0.3'%3E%3Cpath d='M20 10 Q40 80 30 190' stroke='%23F4D279' stroke-width='3' fill='none'/%3E%3Cpath d='M60 5 Q50 100 70 195' stroke='%23F0C850' stroke-width='2.5' fill='none'/%3E%3Cpath d='M100 0 Q110 90 95 200' stroke='%23F4D279' stroke-width='3' fill='none'/%3E%3Cpath d='M140 10 Q130 70 150 195' stroke='%23EEC44A' stroke-width='2' fill='none'/%3E%3Cpath d='M175 5 Q185 110 170 200' stroke='%23F4D279' stroke-width='2.5' fill='none'/%3E%3Cpath d='M10 30 Q90 50 190 40' stroke='%23F0C850' stroke-width='2' fill='none'/%3E%3Cpath d='M5 100 Q100 120 195 95' stroke='%23F4D279' stroke-width='2.5' fill='none'/%3E%3Cpath d='M0 160 Q80 170 200 155' stroke='%23EEC44A' stroke-width='2' fill='none'/%3E%3C/g%3E%3Cg opacity='0.15'%3E%3Ccircle cx='45' cy='60' r='8' fill='%23D4412A'/%3E%3Ccircle cx='120' cy='140' r='10' fill='%23C62D1F'/%3E%3Ccircle cx='160' cy='50' r='6' fill='%23D4412A'/%3E%3C/g%3E%3C/svg%3E")`;
+// ─── Spaghetti wallpaper ──────────────────────────────────────────────
+const spaghettiWallpaper = `url("/spag.jpg")`;
 
 // ─── App ─────────────────────────────────────────────────────────────
 export default function SpaghettiWall() {
@@ -379,6 +379,7 @@ export default function SpaghettiWall() {
 
   return (
     <div
+      className={isSpaghetti ? "spaghetti-bg" : undefined}
       onPointerMove={e => onReorderMove(e.clientY)}
       onPointerUp={onReorderEnd}
       onPointerCancel={onReorderEnd}
@@ -389,7 +390,9 @@ export default function SpaghettiWall() {
         fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif",
         background: isSpaghetti ? undefined : t.bg,
         backgroundImage: isSpaghetti ? spaghettiWallpaper : undefined,
-        backgroundSize: isSpaghetti ? "200px 200px" : undefined,
+        backgroundSize: isSpaghetti ? "cover" : undefined,
+        backgroundPosition: isSpaghetti ? "center" : undefined,
+        backgroundAttachment: isSpaghetti ? "fixed" : undefined,
         color: t.text, minHeight: "100vh",
         WebkitFontSmoothing: "antialiased",
         touchAction: reorderingId ? "none" : undefined,
@@ -401,6 +404,7 @@ export default function SpaghettiWall() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); } }
+        @media (max-width: 768px) { .spaghetti-bg { background-size: 300% !important; background-position: center 40% !important; background-attachment: scroll !important; } }
         .idea-row:hover { background: ${isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"} !important; }
         .idea-row:active { background: ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)"} !important; }
         .btn-secondary { transition: all 0.15s ease; }
