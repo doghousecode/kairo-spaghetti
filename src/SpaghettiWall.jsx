@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabase.js";
 
 // ─── Storage ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "kairo-sw-v1";
@@ -7,18 +6,14 @@ const THEME_KEY = "kairo-theme";
 
 async function loadData() {
   try {
-    if (supabase) {
-      const { data, error } = await supabase
-        .from("ideas")
-        .select("data, position")
-        .order("position", { ascending: true });
-      if (!error && data) {
-        return {
-          ideas: data.map(r => r.data),
-          themeMode: localStorage.getItem(THEME_KEY) || "auto",
-        };
-      }
+    const res = await fetch("/api/ideas");
+    if (res.ok) {
+      const ideas = await res.json();
+      return { ideas, themeMode: localStorage.getItem(THEME_KEY) || "auto" };
     }
+  } catch(e) {}
+  // Fallback to localStorage
+  try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch(e) { return null; }
@@ -27,24 +22,16 @@ async function loadData() {
 async function saveData(d) {
   try {
     localStorage.setItem(THEME_KEY, d.themeMode);
-    if (supabase) {
-      if (d.ideas.length > 0) {
-        await supabase.from("ideas").upsert(
-          d.ideas.map((idea, position) => ({ id: idea.id, data: idea, position }))
-        );
-      }
-      // Delete any ideas removed from the list
-      const ids = d.ideas.map(i => i.id);
-      const deleteQuery = supabase.from("ideas").delete();
-      if (ids.length > 0) {
-        await deleteQuery.not("id", "in", `(${ids.map(id => `"${id}"`).join(",")})`);
-      } else {
-        await deleteQuery.neq("id", "");
-      }
-    } else {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-    }
-  } catch(e) {}
+    const res = await fetch("/api/ideas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ideas: d.ideas }),
+    });
+    if (!res.ok) throw new Error();
+  } catch(e) {
+    // Fallback to localStorage
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(_) {}
+  }
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────
