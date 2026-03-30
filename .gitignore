@@ -1,3 +1,7 @@
 node_modules
 .next
 .env.local
+.DS_Store
+*.tar.gz
+kairo-spaghetti-wall/
+dist/
