@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 
 // ─── Storage ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "kairo-sw-v1";
@@ -71,10 +71,12 @@ export default function SpaghettiWall() {
   const [capturing, setCapturing] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const [sheetDY, setSheetDY] = useState(0);
+  const sheetDYRef = useRef(0);
   const sheetDragActive = useRef(false);
   const sheetDragReady = useRef(false);
   const sheetDragStartY = useRef(0);
   const sheetScrollRef = useRef(null);
+  const sheetRef = useRef(null);
   const [analysing, setAnalysing] = useState(false);
   const [selected, setSelected] = useState(null);
   const [searchQ, setSearchQ] = useState("");
@@ -101,7 +103,7 @@ export default function SpaghettiWall() {
   const reorderingRef = useRef(null);
   const loadedRef = useRef(false);
   const headerRef = useRef(null);
-  const [headerHeight, setHeaderHeight] = useState(120);
+  const [headerHeight, setHeaderHeight] = useState(160);
 
   useEffect(() => { selRef.current = selected; setSheetDY(0); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
@@ -133,6 +135,9 @@ export default function SpaghettiWall() {
     return () => { vv.removeEventListener("resize", handler); vv.removeEventListener("scroll", handler); };
   }, []);
 
+  // Keep sheetDYRef in sync so native touch handlers can read current value
+  useEffect(() => { sheetDYRef.current = sheetDY; }, [sheetDY]);
+
   // Lock body scroll behind overlay (iOS-safe: position:fixed trick)
   useEffect(() => {
     if (!selected) return;
@@ -144,10 +149,49 @@ export default function SpaghettiWall() {
     };
   }, [selected]);
 
-  // Track header height for content offset
+  // Sheet drag via native non-passive touch listeners (React synthetic events lose capture on iOS)
   useEffect(() => {
+    const el = sheetRef.current;
+    if (!el || !selected) return;
+    const INTERACTIVE = ['input','button','textarea','audio','select','a'];
+    let startY = 0, ready = false;
+    const onStart = (e) => {
+      if (INTERACTIVE.includes(e.target.tagName.toLowerCase())) { ready = false; return; }
+      ready = true;
+      startY = e.touches[0].clientY;
+      sheetDragActive.current = false;
+    };
+    const onMove = (e) => {
+      if (!ready) return;
+      const dy = e.touches[0].clientY - startY;
+      const atTop = !sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0;
+      if (!sheetDragActive.current && dy > 6 && atTop) sheetDragActive.current = true;
+      if (sheetDragActive.current) { e.preventDefault(); setSheetDY(Math.max(0, dy)); }
+    };
+    const onEnd = () => {
+      ready = false;
+      if (sheetDragActive.current) {
+        if (sheetDYRef.current > 100) { setSelected(null); setSheetDY(0); } else { setSheetDY(0); }
+        sheetDragActive.current = false;
+      }
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    el.addEventListener('touchcancel', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+    };
+  }, [selected]);
+
+  // Track header height for content offset (useLayoutEffect to avoid first-render gap)
+  useLayoutEffect(() => {
     const el = headerRef.current;
     if (!el) return;
+    setHeaderHeight(el.getBoundingClientRect().height);
     const ro = new ResizeObserver(([e]) => setHeaderHeight(e.contentRect.height));
     ro.observe(el);
     return () => ro.disconnect();
@@ -762,40 +806,7 @@ export default function SpaghettiWall() {
         <div className="modal-overlay" onClick={() => { if (!sheetDragActive.current) setSelected(null); }}
           onPointerDown={e => e.stopPropagation()}
           style={{ position: "fixed", inset: 0, background: t.backdrop, backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}
-            onPointerDown={e => {
-              e.stopPropagation();
-              const tag = e.target.tagName.toLowerCase();
-              // Don't start sheet drag when touching interactive elements
-              if (['input','button','textarea','audio','select'].includes(tag)) {
-                sheetDragReady.current = false;
-                return;
-              }
-              e.currentTarget.setPointerCapture(e.pointerId);
-              sheetDragReady.current = true;
-              sheetDragStartY.current = e.clientY;
-              sheetDragActive.current = false;
-            }}
-            onPointerMove={e => {
-              e.stopPropagation();
-              if (!sheetDragReady.current) return;
-              const dy = e.clientY - sheetDragStartY.current;
-              const atTop = !sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0;
-              if (!sheetDragActive.current && dy > 6 && atTop) sheetDragActive.current = true;
-              if (sheetDragActive.current) setSheetDY(Math.max(0, dy));
-            }}
-            onPointerUp={e => {
-              e.stopPropagation();
-              sheetDragReady.current = false;
-              if (sheetDY > 100) { setSelected(null); } else { setSheetDY(0); }
-              sheetDragActive.current = false;
-            }}
-            onPointerCancel={e => {
-              e.stopPropagation();
-              sheetDragReady.current = false;
-              setSheetDY(0);
-              sheetDragActive.current = false;
-            }}
+          <div ref={sheetRef} className="modal-content" onClick={e => e.stopPropagation()}
             style={{
               width: "100%", maxWidth: 680,
               background: t.bgElevated, borderRadius: "16px 16px 0 0",
