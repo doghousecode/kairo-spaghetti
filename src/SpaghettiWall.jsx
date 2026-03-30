@@ -308,14 +308,20 @@ export default function SpaghettiWall() {
         style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "14px 16px",
-          borderBottom: `0.5px solid ${t.separator}`,
+          borderBottom: isSpaghetti ? "none" : `0.5px solid ${t.separator}`,
           transition: isReordering ? "none" : "transform 0.2s ease, background 0.15s ease",
           transform: isReordering ? `translateY(${reorderY}px)` : "none",
           zIndex: isReordering ? 100 : 1,
           position: "relative",
-          background: isReordering ? (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)") : "transparent",
-          borderRadius: isReordering ? 12 : 0,
-          boxShadow: isReordering ? "0 8px 24px rgba(0,0,0,0.15)" : "none",
+          marginBottom: isSpaghetti ? 6 : 0,
+          background: isSpaghetti
+            ? "rgba(20,20,20,0.62)"
+            : isReordering ? (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)") : "transparent",
+          borderRadius: isSpaghetti ? 12 : isReordering ? 12 : 0,
+          border: isSpaghetti ? "1px solid rgba(255,255,255,0.13)" : "none",
+          boxShadow: isSpaghetti ? "0 2px 12px rgba(0,0,0,0.35)" : isReordering ? "0 8px 24px rgba(0,0,0,0.15)" : "none",
+          backdropFilter: isSpaghetti ? "blur(6px)" : "none",
+          WebkitBackdropFilter: isSpaghetti ? "blur(6px)" : "none",
           userSelect: "none",
         }}
       >
@@ -481,13 +487,13 @@ export default function SpaghettiWall() {
 
       {/* ─── Idea List ─── */}
       <main style={{
-        maxWidth: 680, margin: "0 auto",
-        background: isSpaghetti ? "rgba(0,0,0,0.55)" : t.bgSecondary,
+        maxWidth: 680,
+        background: isSpaghetti ? "rgba(0,0,0,0.10)" : t.bgSecondary,
         borderRadius: isSpaghetti ? 16 : 0,
         margin: isSpaghetti ? "12px auto" : "0 auto",
         overflow: "hidden",
-        boxShadow: isSpaghetti ? "0 8px 32px rgba(0,0,0,0.3)" : "none",
         minHeight: "calc(100vh - 160px)",
+        padding: isSpaghetti ? "6px 8px" : 0,
       }}>
         {filtered.length === 0 && (
           <div style={{ padding: 60, textAlign: "center" }}>
