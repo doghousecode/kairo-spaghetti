@@ -5,8 +5,8 @@ const PRECACHE_URLS = [
   '/',
   '/spag.jpg',
   '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/icon.png',
+  '/apple-icon.png',
 ];
 
 self.addEventListener('install', (e) => {
