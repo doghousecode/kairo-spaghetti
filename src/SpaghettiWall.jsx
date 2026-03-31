@@ -758,7 +758,7 @@ export default function SpaghettiWall() {
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
         borderBottom: `0.5px solid ${t.separator}`,
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ overflow: "visible" }}>
             <h1 style={{
               fontSize: 34, fontWeight: 800, fontStyle: "italic",
@@ -803,54 +803,6 @@ export default function SpaghettiWall() {
             </button>
           </div>
         </div>
-
-        {/* Search */}
-        <div style={{ marginBottom: allTags.length > 0 ? 8 : 0 }}>
-          <input
-            type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
-            placeholder="Search ideas…"
-            style={{
-              width: "100%", padding: "9px 14px", borderRadius: 12,
-              border: `1px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-              background: t.inputBg, color: t.text, fontSize: 15, outline: "none",
-            }}
-          />
-        </div>
-
-        {/* Tag filters */}
-        {allTags.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 2 }}>
-            {allTags.slice(0, 20).map(tg => (
-              <button key={tg} onClick={() => setFilterTags(p => p.includes(tg) ? p.filter(x => x !== tg) : [...p, tg])} style={{
-                padding: "4px 12px", borderRadius: 20,
-                border: filterTags.includes(tg)
-                  ? "1.5px solid transparent"
-                  : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
-                background: filterTags.includes(tg) ? t.accent : "transparent",
-                color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
-                fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
-                whiteSpace: "nowrap",
-              }}>{tg}</button>
-            ))}
-            {filterTags.length > 0 && (
-              <button onClick={() => setFilterTags([])} style={{
-                padding: "4px 10px", borderRadius: 20, border: "none",
-                background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
-              }}>Clear</button>
-            )}
-          </div>
-        )}
-
-        {/* Offline banner */}
-        {!isOnline && (
-          <div style={{
-            marginTop: 8, padding: "5px 12px", borderRadius: 8, textAlign: "center",
-            background: "rgba(255,149,0,0.18)", border: "1px solid rgba(255,149,0,0.35)",
-            fontSize: 12, fontWeight: 500, color: isDark ? "#FFCC00" : "#8A5A00",
-          }}>
-            Offline — changes saved locally, will sync when reconnected
-          </div>
-        )}
       </header>
 
       {/* ─── Idea List ─── */}
@@ -860,6 +812,53 @@ export default function SpaghettiWall() {
         minHeight: "100vh",
         padding: `${headerHeight + 16}px 8px 40px`,
       }}>
+
+        {/* Search + Tags — scrolls with content */}
+        <div style={{ marginBottom: 12, padding: "0 4px" }}>
+          <div style={{ marginBottom: allTags.length > 0 ? 8 : 0 }}>
+            <input
+              type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+              placeholder="Search ideas…"
+              style={{
+                width: "100%", padding: "9px 14px", borderRadius: 12,
+                border: `1px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                background: t.inputBg, color: t.text, fontSize: 15, outline: "none",
+              }}
+            />
+          </div>
+          {allTags.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 2 }}>
+              {allTags.slice(0, 20).map(tg => (
+                <button key={tg} onClick={() => setFilterTags(p => p.includes(tg) ? p.filter(x => x !== tg) : [...p, tg])} style={{
+                  padding: "4px 12px", borderRadius: 20,
+                  border: filterTags.includes(tg)
+                    ? "1.5px solid transparent"
+                    : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
+                  background: filterTags.includes(tg) ? t.accent : "transparent",
+                  color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
+                  fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
+                  whiteSpace: "nowrap",
+                }}>{tg}</button>
+              ))}
+              {filterTags.length > 0 && (
+                <button onClick={() => setFilterTags([])} style={{
+                  padding: "4px 10px", borderRadius: 20, border: "none",
+                  background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
+                }}>Clear</button>
+              )}
+            </div>
+          )}
+          {!isOnline && (
+            <div style={{
+              marginTop: 8, padding: "5px 12px", borderRadius: 8, textAlign: "center",
+              background: "rgba(255,149,0,0.18)", border: "1px solid rgba(255,149,0,0.35)",
+              fontSize: 12, fontWeight: 500, color: isDark ? "#FFCC00" : "#8A5A00",
+            }}>
+              Offline — changes saved locally, will sync when reconnected
+            </div>
+          )}
+        </div>
+
         {filtered.length === 0 && (
           <div style={{ padding: 60, textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>💭</div>
