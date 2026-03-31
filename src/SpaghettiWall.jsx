@@ -71,6 +71,7 @@ export default function SpaghettiWall() {
   const [capturing, setCapturing] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const [sheetDY, setSheetDY] = useState(0);
+  const [dismissing, setDismissing] = useState(false);
   const sheetDYRef = useRef(0);
   const sheetDragActive = useRef(false);
   const sheetDragReady = useRef(false);
@@ -105,7 +106,7 @@ export default function SpaghettiWall() {
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState(160);
 
-  useEffect(() => { selRef.current = selected; setSheetDY(0); sheetDragActive.current = false; }, [selected]);
+  useEffect(() => { selRef.current = selected; setSheetDY(0); setDismissing(false); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
 
   // Non-passive touchmove: prevent page scroll during drag (React's synthetic onTouchMove is passive)
@@ -154,11 +155,12 @@ export default function SpaghettiWall() {
     const el = sheetRef.current;
     if (!el || !selected) return;
     const INTERACTIVE = ['input','button','textarea','audio','select','a'];
-    let startY = 0, ready = false;
+    let startY = 0, ready = false, lastMoveY = 0, lastMoveT = 0;
     const onStart = (e) => {
       if (INTERACTIVE.includes(e.target.tagName.toLowerCase())) { ready = false; return; }
       ready = true;
       startY = e.touches[0].clientY;
+      lastMoveY = startY; lastMoveT = e.timeStamp;
       sheetDragActive.current = false;
     };
     const onMove = (e) => {
@@ -166,24 +168,46 @@ export default function SpaghettiWall() {
       const dy = e.touches[0].clientY - startY;
       const atTop = !sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0;
       if (!sheetDragActive.current && dy > 6 && atTop) sheetDragActive.current = true;
-      if (sheetDragActive.current) { e.preventDefault(); setSheetDY(Math.max(0, dy)); }
-    };
-    const onEnd = () => {
-      ready = false;
       if (sheetDragActive.current) {
-        if (sheetDYRef.current > 100) { setSelected(null); setSheetDY(0); } else { setSheetDY(0); }
-        sheetDragActive.current = false;
+        e.preventDefault();
+        setSheetDY(Math.max(0, dy));
+        lastMoveY = e.touches[0].clientY;
+        lastMoveT = e.timeStamp;
       }
     };
+    const triggerDismiss = () => {
+      setDismissing(true);
+      setSheetDY(window.innerHeight + 100);
+      setTimeout(() => setSelected(null), 400);
+    };
+    const onEnd = (e) => {
+      ready = false;
+      if (sheetDragActive.current) {
+        sheetDragActive.current = false;
+        const dy = sheetDYRef.current;
+        const vh = window.innerHeight;
+        // Velocity in px/ms — only trust if the last move was recent (< 150ms ago)
+        const elapsed = e.timeStamp - lastMoveT;
+        const endY = e.changedTouches?.[0]?.clientY ?? lastMoveY;
+        const velocity = (elapsed > 0 && elapsed < 150) ? (endY - lastMoveY) / elapsed : 0;
+        // Dismiss if dragged past 45% of the screen, or flicked down fast with at least 60px of travel
+        if (dy > vh * 0.45 || (velocity > 0.5 && dy > 60)) {
+          triggerDismiss();
+        } else {
+          setSheetDY(0);
+        }
+      }
+    };
+    const onCancel = () => { ready = false; if (sheetDragActive.current) { sheetDragActive.current = false; setSheetDY(0); } };
     el.addEventListener('touchstart', onStart, { passive: true });
     el.addEventListener('touchmove', onMove, { passive: false });
     el.addEventListener('touchend', onEnd, { passive: true });
-    el.addEventListener('touchcancel', onEnd, { passive: true });
+    el.addEventListener('touchcancel', onCancel, { passive: true });
     return () => {
       el.removeEventListener('touchstart', onStart);
       el.removeEventListener('touchmove', onMove);
       el.removeEventListener('touchend', onEnd);
-      el.removeEventListener('touchcancel', onEnd);
+      el.removeEventListener('touchcancel', onCancel);
     };
   }, [selected]);
 
@@ -495,7 +519,7 @@ export default function SpaghettiWall() {
       <div
         onPointerDown={e => { hasMoved.current = false; downY.current = e.clientY; }}
         onPointerMove={e => { if (Math.abs(e.clientY - downY.current) > 8) hasMoved.current = true; }}
-        onPointerUp={() => { if (!hasMoved.current && reorderingId !== idea.id) { setSelected(idea); setNoteInput(""); setEditingTitle(false); } }}
+        onPointerUp={() => { if (!hasMoved.current && !reorderingRef.current) { setSelected(idea); setNoteInput(""); setEditingTitle(false); } }}
         onPointerCancel={() => { hasMoved.current = true; }}
         style={{
           display: "flex", alignItems: "center", gap: 12,
@@ -808,7 +832,9 @@ export default function SpaghettiWall() {
               padding: "0 0 0", boxShadow: "0 -4px 32px rgba(0,0,0,0.15)",
               maxHeight: "90vh",
               transform: `translateY(${sheetDY}px)`,
-              transition: sheetDY > 0 ? "none" : "transform 0.35s cubic-bezier(0.32, 0, 0.67, 0)",
+              transition: dismissing
+                ? "transform 0.4s cubic-bezier(0.4, 0, 1, 1)"
+                : sheetDY > 0 ? "none" : "transform 0.35s cubic-bezier(0.32, 0, 0.67, 0)",
             }}>
             {/* Handle — visual indicator */}
             <div style={{ width: "100%", padding: "12px 0 8px", display: "flex", justifyContent: "center", cursor: "grab" }}>
