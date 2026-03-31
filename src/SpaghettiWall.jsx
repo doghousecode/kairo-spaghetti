@@ -49,7 +49,7 @@ async function analyseIdea(text, existing) {
     const d = await res.json();
     return JSON.parse((d.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim());
   } catch(e) {
-    return { title: text.split(/\s+/).slice(0, 5).join(" "), tags: [], insight: "", connections: [] };
+    return { title: text.split(/\s+/).slice(0, 5).join(" "), tags: [], insight: "", connections: [], _failed: true };
   }
 }
 
@@ -214,6 +214,29 @@ export default function SpaghettiWall() {
     return () => clearTimeout(t);
   }, [ideas, themeMode]);
 
+  // Retry AI analysis for ideas that were captured while offline
+  useEffect(() => {
+    const retry = async () => {
+      const pending = ideasRef.current.filter(i => i.needsAnalysis && i.text);
+      if (!pending.length) return;
+      for (const idea of pending) {
+        const others = ideasRef.current.filter(i => i.id !== idea.id);
+        const analysis = await analyseIdea(idea.text, others);
+        if (analysis._failed) break; // still offline — stop trying
+        setIdeas(prev => prev.map(i => i.id !== idea.id ? i : {
+          ...i,
+          title: analysis.title || i.title,
+          tags: analysis.tags?.length ? analysis.tags : i.tags,
+          insight: analysis.insight || i.insight,
+          connections: (analysis.connections || []).map(Number).filter(n => !isNaN(n)),
+          needsAnalysis: undefined,
+        }));
+      }
+    };
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, []);
+
   // Speech recognition
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -288,6 +311,7 @@ export default function SpaghettiWall() {
       attachments: captureImage ? [{ type: "image", data: captureImage, at: new Date().toISOString() }] : [],
       createdAt: new Date().toISOString(),
       priority: "none",
+      needsAnalysis: analysis._failed ? true : undefined,
     };
     setIdeas(p => [idea, ...p]);
     setInput(""); setCaptureImage(null); setAnalysing(false); setCapturing(false);
