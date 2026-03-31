@@ -65,7 +65,7 @@ const spaghettiWallpaper = `url("/spag.jpg")`;
 
 // ─── Priority config (module-level so IdeaRow can access it) ──────────
 const PRIORITIES = [
-  { key: "none",   label: "—",    color: "transparent" },
+  { key: "none",   label: "—",    color: "#5b80e8" },
   { key: "low",    label: "Low",  color: "#34C759" },
   { key: "medium", label: "Med",  color: "#FF9500" },
   { key: "high",   label: "High", color: "#FF3B30" },
@@ -197,7 +197,7 @@ const IdeaRow = memo(function IdeaRow({
         onClick={e => { e.stopPropagation(); cyclePriority(idea.id); }}
         style={{
           width: 6, minHeight: 40, borderRadius: 3, flexShrink: 0,
-          background: pri.color === "transparent" ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)") : pri.color,
+          background: pri.color,
           border: "none", cursor: "pointer", padding: 0,
           transition: "background 0.2s ease",
         }} />
