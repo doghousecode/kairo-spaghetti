@@ -435,10 +435,9 @@ export default function SpaghettiWall() {
   useEffect(() => { reorderingRef.current = reorderingId; }, [reorderingId]);
 
   const onReorderStart = (id, filteredIdx, clientY) => {
-    // Measure the actual rendered height of this card (including its marginBottom)
-    // so shift amounts and step thresholds match the real layout exactly.
+    reorderingRef.current = id;                                   // synchronous — container can see it immediately
     const el = rowRefs.current.get(id);
-    if (el) rowHeightRef.current = el.getBoundingClientRect().height + 8; // +8 = marginBottom
+    if (el) rowHeightRef.current = el.getBoundingClientRect().height + 8;
     setReorderingId(id);
     reorderStartY.current = clientY;
     reorderStartIdx.current = filteredIdx;
@@ -447,7 +446,7 @@ export default function SpaghettiWall() {
   };
 
   const onReorderMove = (clientY) => {
-    if (reorderingId === null) return;
+    if (!reorderingRef.current) return;                           // use synchronous ref
     const dy = clientY - reorderStartY.current;
     const rh = rowHeightRef.current;
     setReorderY(dy);
@@ -459,12 +458,14 @@ export default function SpaghettiWall() {
   };
 
   const onReorderEnd = () => {
-    if (reorderingId === null) return;
+    if (!reorderingRef.current) return;
+    const draggingId = reorderingRef.current;
+    reorderingRef.current = null;                                 // synchronous clear
     const startFIdx = reorderStartIdx.current;
     const endFIdx = reorderTargetIdx ?? startFIdx;
     if (endFIdx !== startFIdx) {
       setIdeas(prev => {
-        const fromIdx = prev.findIndex(i => i.id === reorderingId);
+        const fromIdx = prev.findIndex(i => i.id === draggingId);
         if (fromIdx === -1) return prev;
         const offset = endFIdx - startFIdx;
         const toIdx = Math.max(0, Math.min(prev.length - 1, fromIdx + offset));
@@ -516,7 +517,17 @@ export default function SpaghettiWall() {
     return (
       <div
         onPointerDown={e => { hasMoved.current = false; downY.current = e.clientY; }}
-        onPointerMove={e => { if (Math.abs(e.clientY - downY.current) > 8) hasMoved.current = true; }}
+        onPointerMove={e => {
+          if (Math.abs(e.clientY - downY.current) > 8) {
+            hasMoved.current = true;
+            // Start drag on first threshold cross — no grab dot needed
+            if (!reorderingRef.current) {
+              reorderingRef.current = idea.id;                   // synchronous so container sees it
+              e.currentTarget.setPointerCapture(e.pointerId);
+              onReorderStart(idea.id, filteredIdx, downY.current);
+            }
+          }
+        }}
         onPointerUp={() => { if (!hasMoved.current && !reorderingRef.current) { setSelected(idea); setNoteInput(""); setEditingTitle(false); } }}
         onPointerCancel={() => { hasMoved.current = true; }}
         style={{
@@ -532,15 +543,14 @@ export default function SpaghettiWall() {
           borderRadius: 12,
           backdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
           WebkitBackdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
-          // Inset shadows are identical for both states — only the outer drop shadow
-          // changes on lift, avoiding any flicker when grabbing
           boxShadow: isReordering
             ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`
             : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`,
           // ─────────────────────────────────────────────────────────────
           userSelect: "none", WebkitUserSelect: "none",
+          WebkitTapHighlightColor: "transparent",
           cursor: isReordering ? "grabbing" : "pointer",
-          touchAction: isReordering ? "none" : "pan-y",
+          // touchAction handled by wrapper div
         }}
       >
         {/* Priority indicator — stops propagation so it doesn't trigger tap-to-open */}
@@ -589,12 +599,6 @@ export default function SpaghettiWall() {
           </div>
         </div>
 
-        {/* Drag handle — touch here to reorder immediately (no long-press needed) */}
-        <div
-          onPointerDown={e => { e.stopPropagation(); e.currentTarget.setPointerCapture(e.pointerId); onReorderStart(idea.id, filteredIdx, e.clientY); }}
-          style={{ color: t.textTertiary, fontSize: 18, padding: "4px 4px 4px 8px", flexShrink: 0,
-            opacity: 0.5, touchAction: "none", cursor: "grab" }}
-        >⠿</div>
       </div>
     );
   };
@@ -605,7 +609,7 @@ export default function SpaghettiWall() {
       onPointerMove={e => onReorderMove(e.clientY)}
       onPointerUp={onReorderEnd}
       onPointerCancel={onReorderEnd}
-      onTouchMove={e => { if (reorderingId) { e.preventDefault(); onReorderMove(e.touches[0].clientY); } }}
+      onTouchMove={e => { if (reorderingRef.current) { e.preventDefault(); onReorderMove(e.touches[0].clientY); } }}
       onTouchEnd={onReorderEnd}
       onTouchCancel={onReorderEnd}
       style={{
@@ -747,6 +751,7 @@ export default function SpaghettiWall() {
               zIndex: reorderingId === idea.id ? 100 : 1,
               transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
               transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
+              touchAction: "none",
             }}>
               <IdeaRow idea={idea} idx={ideas.indexOf(idea)} filteredIdx={filteredIdx} />
             </div>
