@@ -768,41 +768,39 @@ export default function SpaghettiWall() {
             }}>spaghetti wall</h1>
             <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>Throw some ideas, see what sticks</div>
           </div>
-          {/* Theme toggle */}
-          <div style={{ display: "flex", gap: 2, background: t.inputBg, borderRadius: 8, padding: 2 }}>
-            {[
-              { key: "light", label: "☀️" },
-              { key: "dark", label: "🌙" },
-              { key: "auto", label: "A" },
-              { key: "spaghetti", label: "🍝" },
-            ].map(opt => (
-              <button key={opt.key} onClick={() => setThemeMode(opt.key)} style={{
-                width: 32, height: 28, borderRadius: 6, border: "none",
-                background: themeMode === opt.key ? t.bgElevated : "transparent",
-                color: themeMode === opt.key ? t.text : t.textSecondary,
-                fontSize: opt.key === "auto" ? 12 : 14, fontWeight: 600, cursor: "pointer",
-                boxShadow: themeMode === opt.key ? t.cardShadow : "none",
+          {/* Theme toggle + LG button — stacked column, visually grouped */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
+            <div style={{ display: "flex", gap: 2, background: t.inputBg, borderRadius: 8, padding: 2 }}>
+              {[
+                { key: "light", label: "☀️" },
+                { key: "dark", label: "🌙" },
+                { key: "auto", label: "A" },
+                { key: "spaghetti", label: "🍝" },
+              ].map(opt => (
+                <button key={opt.key} onClick={() => setThemeMode(opt.key)} style={{
+                  width: 32, height: 28, borderRadius: 6, border: "none",
+                  background: themeMode === opt.key ? t.bgElevated : "transparent",
+                  color: themeMode === opt.key ? t.text : t.textSecondary,
+                  fontSize: opt.key === "auto" ? 12 : 14, fontWeight: 600, cursor: "pointer",
+                  boxShadow: themeMode === opt.key ? t.cardShadow : "none",
+                  transition: "all 0.2s ease",
+                }}>{opt.label}</button>
+              ))}
+            </div>
+            <button
+              onClick={() => setGlassMode(g => !g)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                height: 32, borderRadius: 8, border: "none",
+                background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
+                color: glassMode ? t.accent : t.textSecondary,
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
                 transition: "all 0.2s ease",
-              }}>{opt.label}</button>
-            ))}
+              }}
+            >
+              <span style={{ fontSize: 14 }}>✦</span> Liquid Glass {glassMode ? "On" : "Off"}
+            </button>
           </div>
-        </div>
-
-        {/* Liquid Glass toggle — own row, right-aligned, same width as theme toggle */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-          <button
-            onClick={() => setGlassMode(g => !g)}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              width: 138, height: 32, borderRadius: 8, border: "none",
-              background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
-              color: glassMode ? t.accent : t.textSecondary,
-              fontSize: 12, fontWeight: 600, cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-          >
-            <span style={{ fontSize: 14 }}>✦</span> Liquid Glass {glassMode ? "On" : "Off"}
-          </button>
         </div>
 
         {/* Search */}
