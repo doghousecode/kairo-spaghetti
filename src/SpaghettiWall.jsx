@@ -599,6 +599,10 @@ export default function SpaghettiWall() {
           </div>
         </div>
 
+        {/* Drag handle — visual affordance only, pointer events handled by full card */}
+        <div style={{ color: t.textTertiary, fontSize: 18, padding: "4px 4px 4px 8px", flexShrink: 0,
+          opacity: 0.4, pointerEvents: "none", userSelect: "none" }}>⠿</div>
+
       </div>
     );
   };
