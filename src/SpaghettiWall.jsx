@@ -92,7 +92,7 @@ function timeAgo(d) {
 const IdeaRow = memo(function IdeaRow({
   idea, filteredIdx, isReordering, reorderY,
   reorderingRef, onReorderStart,
-  t, isDark, isSpaghetti, glassMode,
+  t, isDark, isSpaghetti,
   setSelected, setNoteInput, setEditingTitle, cyclePriority,
 }) {
   const hasMoved = useRef(false);
@@ -104,19 +104,9 @@ const IdeaRow = memo(function IdeaRow({
 
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
-  // Liquid Glass: dark tint + desaturated blur so the vivid orange spaghetti
-  // reads as muted frosted texture rather than amplified orange.
-  // saturate(300%) was making it worse — we want the opposite: calm the colour,
-  // let the texture show through a dark frosted pane.
-  const cardBg = glassMode
-    ? (isDark || isSpaghetti ? "rgba(0,0,0,0.38)" : "rgba(255,255,255,0.38)")
-    : (isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)");
-  const cardBorder = glassMode
-    ? (isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.32)" : "1.5px solid rgba(255,255,255,0.9)")
-    : (isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)");
-  const cardBlur = glassMode
-    ? "blur(48px) saturate(60%) brightness(0.9)"
-    : "blur(28px) saturate(180%) brightness(1.04)";
+  const cardBg = isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
+  const cardBorder = isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
+  const cardBlur = "blur(28px) saturate(180%) brightness(1.04)";
 
   return (
     <div
@@ -820,6 +810,10 @@ export default function SpaghettiWall() {
                 transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
                 transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
                 touchAction: "pan-y",
+                // Glass mode: brightness on the wrapper (same technique as the old
+                // :active CSS that produced the correct look — brightens the dark card
+                // making it appear luminous/glassy without touching backdrop-filter)
+                filter: glassMode ? "brightness(1.5)" : undefined,
               }}>
               <IdeaRow
                 idea={idea}
@@ -831,7 +825,6 @@ export default function SpaghettiWall() {
                 t={t}
                 isDark={isDark}
                 isSpaghetti={isSpaghetti}
-                glassMode={glassMode}
                 setSelected={setSelected}
                 setNoteInput={setNoteInput}
                 setEditingTitle={setEditingTitle}
