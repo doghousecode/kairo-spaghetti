@@ -104,15 +104,14 @@ const IdeaRow = memo(function IdeaRow({
 
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
-  // Liquid Glass: strong blur creates the lens-distortion look; enough white
-  // tint to read as glass rather than disappearing into the background colour
-  // (especially important on the vivid spaghetti wallpaper where near-zero
-  // opacity just looks solid orange).
+  // Liquid Glass: same dark-tint approach as normal mode but more transparent,
+  // so the spaghetti wallpaper shows through prominently. White tint over the
+  // vivid orange bg just looks orange — dark tint gives frosted dark glass.
   const cardBg = glassMode
-    ? "rgba(255,255,255,0.18)"
+    ? (isDark || isSpaghetti ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.35)")
     : (isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)");
   const cardBorder = glassMode
-    ? "1.5px solid rgba(255,255,255,0.55)"
+    ? (isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.28)" : "1.5px solid rgba(255,255,255,0.9)")
     : (isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)");
   const cardBlur = glassMode
     ? "blur(52px) saturate(300%) brightness(1.22)"
