@@ -531,8 +531,8 @@ export default function SpaghettiWall() {
       needsAnalysis: analysis._failed ? true : undefined,
     };
     setIdeas(p => [idea, ...p]);
-    window.scrollTo({ top: 0, behavior: "smooth" });
     setInput(""); setCaptureImage(null); setAnalysing(false); setCapturing(false);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 80);
     if (listening) { recogRef.current?.stop(); setListening(false); }
   };
 
@@ -761,50 +761,52 @@ export default function SpaghettiWall() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
           <div>
             <h1 style={{
-              fontSize: 34, fontWeight: 900, fontStyle: "italic",
+              fontSize: 34, fontWeight: 800, fontStyle: "italic",
               fontFamily: "'Jost', -apple-system, sans-serif",
               textTransform: "lowercase", letterSpacing: "-0.5px",
-              fontWeight: 800, color: t.text, lineHeight: 1.1,
+              color: isSpaghetti ? "#2a3a6a" : t.text, lineHeight: 1.1,
             }}>spaghetti wall</h1>
             <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>Throw some ideas, see what sticks</div>
           </div>
-          {/* Theme toggle + LG button stacked, same width */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <div style={{ display: "flex", gap: 2, background: t.inputBg, borderRadius: 8, padding: 2 }}>
-              {[
-                { key: "light", label: "☀️" },
-                { key: "dark", label: "🌙" },
-                { key: "auto", label: "A" },
-                { key: "spaghetti", label: "🍝" },
-              ].map(opt => (
-                <button key={opt.key} onClick={() => setThemeMode(opt.key)} style={{
-                  width: 32, height: 28, borderRadius: 6, border: "none",
-                  background: themeMode === opt.key ? t.bgElevated : "transparent",
-                  color: themeMode === opt.key ? t.text : t.textSecondary,
-                  fontSize: opt.key === "auto" ? 12 : 14, fontWeight: 600, cursor: "pointer",
-                  boxShadow: themeMode === opt.key ? t.cardShadow : "none",
-                  transition: "all 0.2s ease",
-                }}>{opt.label}</button>
-              ))}
-            </div>
-            <button
-              onClick={() => setGlassMode(g => !g)}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                height: 32, borderRadius: 8, border: "none",
-                background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
-                color: glassMode ? t.accent : t.textSecondary,
-                fontSize: 12, fontWeight: 600, cursor: "pointer",
+          {/* Theme toggle */}
+          <div style={{ display: "flex", gap: 2, background: t.inputBg, borderRadius: 8, padding: 2 }}>
+            {[
+              { key: "light", label: "☀️" },
+              { key: "dark", label: "🌙" },
+              { key: "auto", label: "A" },
+              { key: "spaghetti", label: "🍝" },
+            ].map(opt => (
+              <button key={opt.key} onClick={() => setThemeMode(opt.key)} style={{
+                width: 32, height: 28, borderRadius: 6, border: "none",
+                background: themeMode === opt.key ? t.bgElevated : "transparent",
+                color: themeMode === opt.key ? t.text : t.textSecondary,
+                fontSize: opt.key === "auto" ? 12 : 14, fontWeight: 600, cursor: "pointer",
+                boxShadow: themeMode === opt.key ? t.cardShadow : "none",
                 transition: "all 0.2s ease",
-              }}
-            >
-              <span style={{ fontSize: 14 }}>✦</span> Liquid Glass {glassMode ? "On" : "Off"}
-            </button>
+              }}>{opt.label}</button>
+            ))}
           </div>
         </div>
 
+        {/* Liquid Glass toggle — own row, right-aligned, between theme toggle and search */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button
+            onClick={() => setGlassMode(g => !g)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              height: 32, paddingInline: 12, borderRadius: 8, border: "none",
+              background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
+              color: glassMode ? t.accent : t.textSecondary,
+              fontSize: 12, fontWeight: 600, cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            <span style={{ fontSize: 14 }}>✦</span> Liquid Glass {glassMode ? "On" : "Off"}
+          </button>
+        </div>
+
         {/* Search */}
-        <div style={{ position: "relative", marginTop: 10, marginBottom: allTags.length > 0 ? 8 : 0 }}>
+        <div style={{ position: "relative", marginBottom: allTags.length > 0 ? 8 : 0 }}>
           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: t.textTertiary }}>🔍</span>
           <input
             type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
