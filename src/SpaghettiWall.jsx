@@ -531,6 +531,7 @@ export default function SpaghettiWall() {
       needsAnalysis: analysis._failed ? true : undefined,
     };
     setIdeas(p => [idea, ...p]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
     setInput(""); setCaptureImage(null); setAnalysing(false); setCapturing(false);
     if (listening) { recogRef.current?.stop(); setListening(false); }
   };
@@ -726,7 +727,7 @@ export default function SpaghettiWall() {
       <div style={{ position: "relative", zIndex: 1 }}>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@1,900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@1,800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 0; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
@@ -752,7 +753,7 @@ export default function SpaghettiWall() {
       {/* ─── Header — fixed, never scrolls ─── */}
       <header ref={headerRef} style={{
         padding: "16px 20px 10px",
-        background: isSpaghetti ? "rgba(0,0,0,0.88)" : isDark ? "rgba(0,0,0,0.94)" : "rgba(225,225,232,0.97)",
+        background: isDark || isSpaghetti ? "rgba(11,18,42,0.97)" : "rgba(225,225,232,0.97)",
         backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
         borderBottom: `0.5px solid ${t.separator}`,
@@ -763,7 +764,7 @@ export default function SpaghettiWall() {
               fontSize: 34, fontWeight: 900, fontStyle: "italic",
               fontFamily: "'Jost', -apple-system, sans-serif",
               textTransform: "lowercase", letterSpacing: "-0.5px",
-              color: t.text, lineHeight: 1.1,
+              fontWeight: 800, color: t.text, lineHeight: 1.1,
             }}>spaghetti wall</h1>
             <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>Throw some ideas, see what sticks</div>
           </div>
@@ -803,7 +804,7 @@ export default function SpaghettiWall() {
         </div>
 
         {/* Search */}
-        <div style={{ position: "relative", marginBottom: allTags.length > 0 ? 8 : 0 }}>
+        <div style={{ position: "relative", marginTop: 10, marginBottom: allTags.length > 0 ? 8 : 0 }}>
           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: t.textTertiary }}>🔍</span>
           <input
             type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
