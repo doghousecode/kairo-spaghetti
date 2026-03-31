@@ -104,17 +104,18 @@ const IdeaRow = memo(function IdeaRow({
 
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
-  // Liquid Glass: same dark-tint approach as normal mode but more transparent,
-  // so the spaghetti wallpaper shows through prominently. White tint over the
-  // vivid orange bg just looks orange — dark tint gives frosted dark glass.
+  // Liquid Glass: dark tint + desaturated blur so the vivid orange spaghetti
+  // reads as muted frosted texture rather than amplified orange.
+  // saturate(300%) was making it worse — we want the opposite: calm the colour,
+  // let the texture show through a dark frosted pane.
   const cardBg = glassMode
-    ? (isDark || isSpaghetti ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.35)")
+    ? (isDark || isSpaghetti ? "rgba(0,0,0,0.38)" : "rgba(255,255,255,0.38)")
     : (isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)");
   const cardBorder = glassMode
-    ? (isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.28)" : "1.5px solid rgba(255,255,255,0.9)")
+    ? (isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.32)" : "1.5px solid rgba(255,255,255,0.9)")
     : (isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)");
   const cardBlur = glassMode
-    ? "blur(52px) saturate(300%) brightness(1.22)"
+    ? "blur(48px) saturate(60%) brightness(0.9)"
     : "blur(28px) saturate(180%) brightness(1.04)";
 
   return (
