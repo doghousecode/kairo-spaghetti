@@ -105,9 +105,9 @@ const IdeaRow = memo(function IdeaRow({
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
   const isLiquid = glassMode && isSpaghetti;
-  const cardBg = isLiquid ? "rgba(0,0,0,0.12)" : isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
+  const cardBg = isLiquid ? "rgba(0,0,0,0.42)" : isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
   const cardBorder = isLiquid ? "1.5px solid rgba(255,255,255,0.22)" : isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
-  const cardBlur = isLiquid ? "blur(44px) saturate(260%) brightness(1.1) contrast(1.04)" : "blur(28px) saturate(180%) brightness(1.04)";
+  const cardBlur = isLiquid ? "blur(40px) saturate(140%) brightness(1.06)" : "blur(28px) saturate(180%) brightness(1.04)";
 
   return (
     <div
@@ -180,7 +180,7 @@ const IdeaRow = memo(function IdeaRow({
             pointerEvents: "none", zIndex: -1,
             backgroundImage: 'url("/spag.jpg")',
             backgroundAttachment: "fixed",
-            opacity: 0.22,
+            opacity: 0.08,
           }} />
           {/* Shimmer: slow diagonal light band sweeping across */}
           <div style={{
