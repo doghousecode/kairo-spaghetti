@@ -105,9 +105,9 @@ const IdeaRow = memo(function IdeaRow({
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
   const isLiquid = glassMode && isSpaghetti;
-  const cardBg = isLiquid ? "rgba(0,0,0,0.42)" : isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
-  const cardBorder = isLiquid ? "1.5px solid rgba(255,255,255,0.22)" : isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
-  const cardBlur = isLiquid ? "blur(40px) saturate(140%) brightness(1.06)" : "blur(28px) saturate(180%) brightness(1.04)";
+  const cardBg = isLiquid ? "rgba(255,255,255,0.07)" : isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
+  const cardBorder = isLiquid ? "1px solid rgba(255,255,255,0.38)" : isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
+  const cardBlur = isLiquid ? "blur(18px) saturate(150%) brightness(1.04)" : "blur(28px) saturate(180%) brightness(1.04)";
 
   return (
     <div
@@ -155,12 +155,12 @@ const IdeaRow = memo(function IdeaRow({
         WebkitBackdropFilter: cardBlur,
         boxShadow: isLiquid
           ? [
-              `0 ${isReordering ? 22 : 6}px ${isReordering ? 52 : 28}px rgba(0,0,0,${isReordering ? 0.62 : 0.48})`,
-              "inset 0 1px 0 rgba(255,255,255,0.28)",
-              "inset 0 -1px 0 rgba(0,0,0,0.2)",
-              "inset 1px 0 0 rgba(255,255,255,0.09)",
-              "inset -1px 0 0 rgba(255,255,255,0.09)",
-              "0 0 0 0.5px rgba(255,255,255,0.12)",
+              `0 ${isReordering ? 20 : 4}px ${isReordering ? 48 : 20}px rgba(0,0,0,${isReordering ? 0.55 : 0.3})`,
+              "0 0 0 0.5px rgba(255,255,255,0.18)",           // outer glow ring
+              "inset 0 1.5px 0 rgba(255,255,255,0.55)",       // top specular — catches the light
+              "inset 0 -1.5px 0 rgba(0,0,0,0.22)",           // bottom shadow — depth
+              "inset 1.5px 0 0 rgba(255,255,255,0.14)",       // left rim
+              "inset -1.5px 0 0 rgba(255,255,255,0.14)",      // right rim
             ].join(", ")
           : isReordering
           ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,${glassMode ? 0.65 : 0.28}), inset 0 -1px 0 rgba(0,0,0,0.1)`
@@ -170,30 +170,18 @@ const IdeaRow = memo(function IdeaRow({
         cursor: isReordering ? "grabbing" : "pointer",
       }}
     >
-      {/* Liquid glass layers — lens zoom + shimmer (spaghetti mode only) */}
+      {/* Shimmer: slow diagonal light sweep — simulates light moving through glass */}
       {isLiquid && (
-        <>
-          {/* Lens: fixed-position zoomed copy of the wallpaper creates magnification.
-              z-index:-1 puts it above card background but below flex content. */}
-          <div className="glass-lens" style={{
-            position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
-            pointerEvents: "none", zIndex: -1,
-            backgroundImage: 'url("/spag.jpg")',
-            backgroundAttachment: "fixed",
-            opacity: 0.08,
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
+          pointerEvents: "none", zIndex: -1,
+        }}>
+          <div className="glass-shimmer" style={{
+            position: "absolute", top: 0, bottom: 0, left: 0, width: "45%",
+            background: "linear-gradient(to right, transparent, rgba(255,255,255,0.07) 50%, transparent)",
+            transform: "skewX(-12deg)",
           }} />
-          {/* Shimmer: slow diagonal light band sweeping across */}
-          <div style={{
-            position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
-            pointerEvents: "none", zIndex: -1,
-          }}>
-            <div className="glass-shimmer" style={{
-              position: "absolute", top: 0, bottom: 0, left: 0, width: "45%",
-              background: "linear-gradient(to right, transparent, rgba(255,255,255,0.07) 50%, transparent)",
-              transform: "skewX(-12deg)",
-            }} />
-          </div>
-        </>
+        </div>
       )}
       {/* Priority indicator */}
       <button
@@ -738,9 +726,7 @@ export default function SpaghettiWall() {
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); } }
         @media (max-width: 768px) { .spaghetti-wallpaper { background-size: 300% !important; background-position: center 40% !important; } }
-        .glass-lens { background-size: 115%; background-position: center; }
-        @media (max-width: 768px) { .glass-lens { background-size: 390% !important; background-position: center 40% !important; } }
-        @keyframes glass-shimmer {
+@keyframes glass-shimmer {
           0% { transform: translateX(-200%) skewX(-12deg); opacity: 0; }
           15% { opacity: 1; }
           85% { opacity: 1; }
