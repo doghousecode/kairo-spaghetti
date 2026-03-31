@@ -746,7 +746,7 @@ export default function SpaghettiWall() {
               position: "relative",
               zIndex: reorderingId === idea.id ? 100 : 1,
               transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
-              transition: "transform 0.28s cubic-bezier(0.2, 0, 0, 1)",
+              transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
             }}>
               <IdeaRow idea={idea} idx={ideas.indexOf(idea)} filteredIdx={filteredIdx} />
             </div>
