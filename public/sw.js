@@ -1,4 +1,4 @@
-const CACHE = 'kairo-v1';
+const CACHE = 'kairo-v2';
 
 // Precache the app shell and wallpaper on install
 const PRECACHE_URLS = [
