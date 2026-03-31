@@ -92,28 +92,58 @@ function timeAgo(d) {
 const IdeaRow = memo(function IdeaRow({
   idea, filteredIdx, isReordering, reorderY,
   reorderingRef, onReorderStart,
-  t, isDark, isSpaghetti,
+  t, isDark, isSpaghetti, glassMode,
   setSelected, setNoteInput, setEditingTitle, cyclePriority,
 }) {
   const hasMoved = useRef(false);
   const downY = useRef(0);
+  const pointerIdRef = useRef(null);
+  const longPressTimer = useRef(null);
+  const cardRef = useRef(null);
   const pri = getPriority(idea.priority);
+
+  useEffect(() => () => clearTimeout(longPressTimer.current), []);
+
+  const cardBg = glassMode
+    ? (isDark || isSpaghetti ? "rgba(0,0,0,0.22)" : "rgba(255,255,255,0.32)")
+    : (isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)");
+  const cardBorder = isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
+  const cardBlur = glassMode
+    ? "blur(36px) saturate(220%) brightness(1.08)"
+    : "blur(28px) saturate(180%) brightness(1.04)";
 
   return (
     <div
-      onPointerDown={e => { hasMoved.current = false; downY.current = e.clientY; }}
-      onPointerMove={e => {
-        if (Math.abs(e.clientY - downY.current) > 8) {
-          hasMoved.current = true;
+      ref={cardRef}
+      onPointerDown={e => {
+        hasMoved.current = false;
+        downY.current = e.clientY;
+        pointerIdRef.current = e.pointerId;
+        clearTimeout(longPressTimer.current);
+        // Long press (450ms) starts drag — quick movement cancels it (scroll gesture)
+        longPressTimer.current = setTimeout(() => {
           if (!reorderingRef.current) {
+            hasMoved.current = true; // prevent tap-to-open on pointer-up
             reorderingRef.current = idea.id;
-            e.currentTarget.setPointerCapture(e.pointerId);
+            try { cardRef.current?.setPointerCapture(pointerIdRef.current); } catch(_) {}
+            if (navigator.vibrate) navigator.vibrate(10);
             onReorderStart(idea.id, filteredIdx, downY.current);
           }
+        }, 450);
+      }}
+      onPointerMove={e => {
+        // Cancel long press if user moves more than 5px — it's a scroll gesture
+        if (Math.abs(e.clientY - downY.current) > 5) {
+          clearTimeout(longPressTimer.current);
         }
       }}
-      onPointerUp={() => { if (!hasMoved.current && !reorderingRef.current) { setSelected(idea); setNoteInput(""); setEditingTitle(false); } }}
-      onPointerCancel={() => { hasMoved.current = true; }}
+      onPointerUp={() => {
+        clearTimeout(longPressTimer.current);
+        if (!hasMoved.current && !reorderingRef.current) {
+          setSelected(idea); setNoteInput(""); setEditingTitle(false);
+        }
+      }}
+      onPointerCancel={() => { clearTimeout(longPressTimer.current); hasMoved.current = true; }}
       style={{
         display: "flex", alignItems: "center", gap: 12,
         padding: "14px 16px",
@@ -121,11 +151,11 @@ const IdeaRow = memo(function IdeaRow({
         transform: isReordering ? `translateY(${reorderY}px)` : "none",
         position: "relative",
         marginBottom: 8,
-        background: isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)",
-        border: isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)",
+        background: cardBg,
+        border: cardBorder,
         borderRadius: 12,
-        backdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
-        WebkitBackdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
+        backdropFilter: cardBlur,
+        WebkitBackdropFilter: cardBlur,
         boxShadow: isReordering
           ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`
           : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`,
@@ -191,6 +221,7 @@ const IdeaRow = memo(function IdeaRow({
 export default function SpaghettiWall() {
   const [ideas, setIdeas] = useState([]);
   const [themeMode, setThemeMode] = useState("auto"); // light|dark|auto|spaghetti
+  const [glassMode, setGlassMode] = useState(false);
   const [input, setInput] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
@@ -349,7 +380,7 @@ export default function SpaghettiWall() {
   useEffect(() => {
     (async () => {
       const d = await loadData();
-      if (d) { setIdeas(d.ideas || []); setThemeMode(d.themeMode || "auto"); }
+      if (d) { setIdeas(d.ideas || []); setThemeMode(d.themeMode || "auto"); setGlassMode(d.glassMode ?? false); }
       loadedRef.current = true; // guard: don't save until we've loaded
     })();
   }, []);
@@ -358,9 +389,9 @@ export default function SpaghettiWall() {
   // loadedRef guard prevents wiping data before initial load completes
   useEffect(() => {
     if (!loadedRef.current) return;
-    const t = setTimeout(() => saveData({ ideas, themeMode }), 800);
+    const t = setTimeout(() => saveData({ ideas, themeMode, glassMode }), 800);
     return () => clearTimeout(t);
-  }, [ideas, themeMode]);
+  }, [ideas, themeMode, glassMode]);
 
   // Retry AI analysis for ideas that were captured while offline
   useEffect(() => {
@@ -695,6 +726,23 @@ export default function SpaghettiWall() {
           </div>
         </div>
 
+        {/* Liquid Glass toggle */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button
+            onClick={() => setGlassMode(g => !g)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "4px 10px", borderRadius: 8, border: "none",
+              background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
+              color: glassMode ? t.accent : t.textSecondary,
+              fontSize: 12, fontWeight: 600, cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            <span style={{ fontSize: 14 }}>✦</span> Liquid Glass {glassMode ? "On" : "Off"}
+          </button>
+        </div>
+
         {/* Search */}
         <div style={{ position: "relative", marginBottom: allTags.length > 0 ? 8 : 0 }}>
           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: t.textTertiary }}>🔍</span>
@@ -765,7 +813,7 @@ export default function SpaghettiWall() {
                 zIndex: isReordering ? 100 : 1,
                 transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
                 transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
-                touchAction: "none",
+                touchAction: "pan-y",
               }}>
               <IdeaRow
                 idea={idea}
@@ -777,6 +825,7 @@ export default function SpaghettiWall() {
                 t={t}
                 isDark={isDark}
                 isSpaghetti={isSpaghetti}
+                glassMode={glassMode}
                 setSelected={setSelected}
                 setNoteInput={setNoteInput}
                 setEditingTitle={setEditingTitle}
