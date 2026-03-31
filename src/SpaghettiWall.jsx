@@ -105,7 +105,7 @@ const IdeaRow = memo(function IdeaRow({
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
   const cardBg = glassMode
-    ? (isDark || isSpaghetti ? "rgba(0,0,0,0.22)" : "rgba(255,255,255,0.32)")
+    ? (isDark || isSpaghetti ? "rgba(0,0,0,0.38)" : "rgba(255,255,255,0.48)")
     : (isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)");
   const cardBorder = isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
   const cardBlur = glassMode
@@ -129,7 +129,7 @@ const IdeaRow = memo(function IdeaRow({
             if (navigator.vibrate) navigator.vibrate(10);
             onReorderStart(idea.id, filteredIdx, downY.current);
           }
-        }, 450);
+        }, 320);
       }}
       onPointerMove={e => {
         // Cancel long press if user moves more than 5px — it's a scroll gesture
