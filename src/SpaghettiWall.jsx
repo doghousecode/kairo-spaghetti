@@ -107,7 +107,7 @@ const IdeaRow = memo(function IdeaRow({
   const isLiquid = glassMode && isSpaghetti;
   const cardBg = isLiquid ? "rgba(255,255,255,0.07)" : isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
   const cardBorder = isLiquid ? "1px solid rgba(255,255,255,0.38)" : isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
-  const cardBlur = isLiquid ? "blur(18px) saturate(150%) brightness(1.04)" : "blur(28px) saturate(180%) brightness(1.04)";
+  const cardBlur = isLiquid ? "blur(20px) grayscale(60%) brightness(0.6)" : "blur(28px) saturate(180%) brightness(1.04)";
 
   return (
     <div
