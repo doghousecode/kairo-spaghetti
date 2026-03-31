@@ -105,7 +105,7 @@ const IdeaRow = memo(function IdeaRow({
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
   const isLiquid = glassMode && isSpaghetti;
-  const cardBg = isDark || isSpaghetti ? "rgba(0,0,0,0.42)" : "rgba(255,255,255,0.72)";
+  const cardBg = isSpaghetti ? "rgba(0,0,0,0.42)" : isDark ? "rgba(50,50,54,0.82)" : "rgba(205,205,212,0.82)";
   const cardBorder = isLiquid
     ? "1.5px solid rgba(255,255,255,0.16)"
     : isSpaghetti || isDark ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(255,255,255,0.85)";
@@ -532,6 +532,7 @@ export default function SpaghettiWall() {
     };
     setIdeas(p => [idea, ...p]);
     setInput(""); setCaptureImage(null); setAnalysing(false); setCapturing(false);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 80);
     if (listening) { recogRef.current?.stop(); setListening(false); }
   };
 
@@ -726,6 +727,7 @@ export default function SpaghettiWall() {
       <div style={{ position: "relative", zIndex: 1 }}>
 
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@1,800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 0; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
@@ -750,52 +752,55 @@ export default function SpaghettiWall() {
 
       {/* ─── Header — fixed, never scrolls ─── */}
       <header ref={headerRef} style={{
-        padding: "20px 20px 12px",
-        background: isSpaghetti ? "rgba(0,0,0,0.65)" : isDark ? "rgba(0,0,0,0.85)" : "rgba(242,242,247,0.92)",
+        padding: "16px 20px 10px",
+        background: isDark || isSpaghetti ? "rgba(13,13,13,0.97)" : "rgba(225,225,232,0.97)",
         backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
         borderBottom: `0.5px solid ${t.separator}`,
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
           <div>
-            <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.5px", color: t.text, lineHeight: 1.1 }}>Spaghetti Wall</h1>
-            <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 3 }}>Throw some ideas, see what sticks</div>
+            <h1 style={{
+              fontSize: 34, fontWeight: 800, fontStyle: "italic",
+              fontFamily: "'Jost', -apple-system, sans-serif",
+              textTransform: "lowercase", letterSpacing: "-0.5px",
+              color: isSpaghetti ? "#2a3a6a" : t.text, lineHeight: 1.1,
+            }}>spaghetti wall</h1>
+            <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>Throw some ideas, see what sticks</div>
           </div>
-          {/* Theme toggle */}
-          <div style={{ display: "flex", gap: 2, background: t.inputBg, borderRadius: 8, padding: 2 }}>
-            {[
-              { key: "light", label: "☀️" },
-              { key: "dark", label: "🌙" },
-              { key: "auto", label: "A" },
-              { key: "spaghetti", label: "🍝" },
-            ].map(opt => (
-              <button key={opt.key} onClick={() => setThemeMode(opt.key)} style={{
-                width: 32, height: 28, borderRadius: 6, border: "none",
-                background: themeMode === opt.key ? t.bgElevated : "transparent",
-                color: themeMode === opt.key ? t.text : t.textSecondary,
-                fontSize: opt.key === "auto" ? 12 : 14, fontWeight: 600, cursor: "pointer",
-                boxShadow: themeMode === opt.key ? t.cardShadow : "none",
+          {/* Theme toggle + LG button — stacked column, visually grouped */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
+            <div style={{ display: "flex", gap: 2, background: t.inputBg, borderRadius: 8, padding: 2 }}>
+              {[
+                { key: "light", label: "☀️" },
+                { key: "dark", label: "🌙" },
+                { key: "auto", label: "A" },
+                { key: "spaghetti", label: "🍝" },
+              ].map(opt => (
+                <button key={opt.key} onClick={() => setThemeMode(opt.key)} style={{
+                  width: 32, height: 28, borderRadius: 6, border: "none",
+                  background: themeMode === opt.key ? t.bgElevated : "transparent",
+                  color: themeMode === opt.key ? t.text : t.textSecondary,
+                  fontSize: opt.key === "auto" ? 12 : 14, fontWeight: 600, cursor: "pointer",
+                  boxShadow: themeMode === opt.key ? t.cardShadow : "none",
+                  transition: "all 0.2s ease",
+                }}>{opt.label}</button>
+              ))}
+            </div>
+            <button
+              onClick={() => setGlassMode(g => !g)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                height: 32, borderRadius: 8, border: "none",
+                background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
+                color: glassMode ? t.accent : t.textSecondary,
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
                 transition: "all 0.2s ease",
-              }}>{opt.label}</button>
-            ))}
+              }}
+            >
+              <span style={{ fontSize: 14 }}>✦</span> Liquid Glass {glassMode ? "On" : "Off"}
+            </button>
           </div>
-        </div>
-
-        {/* Liquid Glass toggle */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 8 }}>
-          <button
-            onClick={() => setGlassMode(g => !g)}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "4px 10px", borderRadius: 8, border: "none",
-              background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
-              color: glassMode ? t.accent : t.textSecondary,
-              fontSize: 12, fontWeight: 600, cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-          >
-            <span style={{ fontSize: 14 }}>✦</span> Liquid Glass {glassMode ? "On" : "Off"}
-          </button>
         </div>
 
         {/* Search */}
