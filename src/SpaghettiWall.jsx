@@ -105,9 +105,11 @@ const IdeaRow = memo(function IdeaRow({
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
   const isLiquid = glassMode && isSpaghetti;
-  const cardBg = isLiquid ? "rgba(0,0,0,0.42)" : isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
-  const cardBorder = isLiquid ? "1px solid rgba(255,255,255,0.38)" : isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
-  const cardBlur = isLiquid ? "blur(24px) saturate(100%)" : "blur(28px) saturate(180%) brightness(1.04)";
+  const cardBg = isDark || isSpaghetti ? "rgba(0,0,0,0.42)" : "rgba(255,255,255,0.72)";
+  const cardBorder = isLiquid
+    ? "1.5px solid rgba(255,255,255,0.16)"
+    : isSpaghetti || isDark ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(255,255,255,0.85)";
+  const cardBlur = isLiquid ? "blur(28px) saturate(180%) brightness(1.04)" : "blur(24px) saturate(100%)";
 
   return (
     <div
@@ -150,16 +152,22 @@ const IdeaRow = memo(function IdeaRow({
         marginBottom: 8,
         background: cardBg,
         border: cardBorder,
-        borderRadius: isLiquid ? 20 : 12,
+        borderRadius: isLiquid ? 12 : isSpaghetti ? 20 : 12,
         backdropFilter: cardBlur,
         WebkitBackdropFilter: cardBlur,
         boxShadow: isLiquid
+          // LG ON: production-style shadow — brightness(1.5) wrapper does the heavy lifting
+          ? isReordering
+            ? `0 16px 40px rgba(0,0,0,0.55), inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.1)`
+            : `0 2px 10px rgba(0,0,0,0.3), inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.1)`
+          // LG OFF spaghetti: our improved rim shadow — no white stripe, just edges
+          : isSpaghetti
           ? [
               `0 ${isReordering ? 20 : 4}px ${isReordering ? 48 : 20}px rgba(0,0,0,${isReordering ? 0.55 : 0.3})`,
-              "0 0 0 0.5px rgba(255,255,255,0.2)",            // outer glow ring — defines the glass edge
-              "inset 0 -1.5px 0 rgba(0,0,0,0.18)",           // bottom shadow — depth
-              "inset 1.5px 0 0 rgba(255,255,255,0.1)",        // left rim
-              "inset -1.5px 0 0 rgba(255,255,255,0.1)",       // right rim
+              "0 0 0 0.5px rgba(255,255,255,0.2)",
+              "inset 0 -1.5px 0 rgba(0,0,0,0.18)",
+              "inset 1.5px 0 0 rgba(255,255,255,0.1)",
+              "inset -1.5px 0 0 rgba(255,255,255,0.1)",
             ].join(", ")
           : isReordering
           ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,${glassMode ? 0.65 : 0.28}), inset 0 -1px 0 rgba(0,0,0,0.1)`
@@ -872,7 +880,7 @@ export default function SpaghettiWall() {
                 transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
                 transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
                 touchAction: "pan-y",
-                filter: undefined,
+                filter: glassMode && isSpaghetti ? "brightness(1.5)" : undefined,
               }}>
               <IdeaRow
                 idea={idea}
