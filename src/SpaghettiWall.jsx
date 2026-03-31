@@ -105,7 +105,7 @@ const IdeaRow = memo(function IdeaRow({
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
   const isLiquid = glassMode && isSpaghetti;
-  const cardBg = isSpaghetti ? "rgba(0,0,0,0.42)" : isDark ? "rgba(50,50,54,0.82)" : "rgba(205,205,212,0.82)";
+  const cardBg = isSpaghetti ? "rgba(0,0,0,0.58)" : isDark ? "rgba(50,50,54,0.82)" : "rgba(205,205,212,0.82)";
   const cardBorder = isLiquid
     ? "1.5px solid rgba(255,255,255,0.16)"
     : isSpaghetti || isDark ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(255,255,255,0.85)";
@@ -759,13 +759,13 @@ export default function SpaghettiWall() {
         borderBottom: `0.5px solid ${t.separator}`,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-          <div>
+          <div style={{ overflow: "visible" }}>
             <h1 style={{
               fontSize: 34, fontWeight: 800, fontStyle: "italic",
               fontFamily: "'Jost', -apple-system, sans-serif",
               textTransform: "lowercase", letterSpacing: "-0.5px",
               color: isSpaghetti || isDark ? "#5b80e8" : t.text, lineHeight: 1.1,
-              transform: "translateZ(0)", WebkitFontSmoothing: "antialiased",
+              overflow: "visible", paddingRight: 6,
             }}>spaghetti wall</h1>
             <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>Throw some ideas, see what sticks</div>
           </div>
