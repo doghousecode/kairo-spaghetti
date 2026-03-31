@@ -430,10 +430,15 @@ export default function SpaghettiWall() {
   const [reorderTargetIdx, setReorderTargetIdx] = useState(null);
   const reorderStartY = useRef(0);
   const reorderStartIdx = useRef(0);
-  const rowHeight = 72;
+  const rowRefs = useRef(new Map());    // id → wrapper DOM element
+  const rowHeightRef = useRef(88);     // measured at drag-start; 88 is a safe fallback
   useEffect(() => { reorderingRef.current = reorderingId; }, [reorderingId]);
 
   const onReorderStart = (id, filteredIdx, clientY) => {
+    // Measure the actual rendered height of this card (including its marginBottom)
+    // so shift amounts and step thresholds match the real layout exactly.
+    const el = rowRefs.current.get(id);
+    if (el) rowHeightRef.current = el.getBoundingClientRect().height + 8; // +8 = marginBottom
     setReorderingId(id);
     reorderStartY.current = clientY;
     reorderStartIdx.current = filteredIdx;
@@ -444,10 +449,11 @@ export default function SpaghettiWall() {
   const onReorderMove = (clientY) => {
     if (reorderingId === null) return;
     const dy = clientY - reorderStartY.current;
+    const rh = rowHeightRef.current;
     setReorderY(dy);
     setReorderTargetIdx(() => {
       // Swap at 65% travel so the dragged card visibly overlaps before neighbours jump
-      const steps = Math.floor(Math.abs(dy) / rowHeight + 0.35) * Math.sign(dy);
+      const steps = Math.floor(Math.abs(dy) / rh + 0.35) * Math.sign(dy);
       return Math.max(0, Math.min(filtered.length - 1, reorderStartIdx.current + steps));
     });
   };
@@ -729,11 +735,14 @@ export default function SpaghettiWall() {
           if (reorderingId && reorderingId !== idea.id && reorderTargetIdx !== null) {
             const s = reorderStartIdx.current;
             const tgt = reorderTargetIdx;
-            if (s < tgt && filteredIdx > s && filteredIdx <= tgt) wrapShift = -rowHeight;
-            else if (s > tgt && filteredIdx >= tgt && filteredIdx < s) wrapShift = rowHeight;
+            const rh = rowHeightRef.current;
+            if (s < tgt && filteredIdx > s && filteredIdx <= tgt) wrapShift = -rh;
+            else if (s > tgt && filteredIdx >= tgt && filteredIdx < s) wrapShift = rh;
           }
           return (
-            <div key={idea.id} className="idea-row" style={{
+            <div key={idea.id} className="idea-row"
+              ref={el => el ? rowRefs.current.set(idea.id, el) : rowRefs.current.delete(idea.id)}
+              style={{
               position: "relative",
               zIndex: reorderingId === idea.id ? 100 : 1,
               transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
