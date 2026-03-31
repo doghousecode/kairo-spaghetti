@@ -764,7 +764,8 @@ export default function SpaghettiWall() {
               fontSize: 34, fontWeight: 800, fontStyle: "italic",
               fontFamily: "'Jost', -apple-system, sans-serif",
               textTransform: "lowercase", letterSpacing: "-0.5px",
-              color: isSpaghetti ? "#2a3a6a" : t.text, lineHeight: 1.1,
+              color: isSpaghetti || isDark ? "#5b80e8" : t.text, lineHeight: 1.1,
+              transform: "translateZ(0)", WebkitFontSmoothing: "antialiased",
             }}>spaghetti wall</h1>
             <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>Throw some ideas, see what sticks</div>
           </div>
