@@ -104,12 +104,17 @@ const IdeaRow = memo(function IdeaRow({
 
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
+  // Liquid Glass: nearly clear with strong blur — the backdrop-filter does all
+  // the work, creating the lens-distortion look as the card moves over content.
+  // A white-tinted glass looks like real glass regardless of dark/light theme.
   const cardBg = glassMode
-    ? (isDark || isSpaghetti ? "rgba(0,0,0,0.38)" : "rgba(255,255,255,0.48)")
+    ? "rgba(255,255,255,0.08)"
     : (isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)");
-  const cardBorder = isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
+  const cardBorder = glassMode
+    ? "1.5px solid rgba(255,255,255,0.5)"
+    : (isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)");
   const cardBlur = glassMode
-    ? "blur(36px) saturate(220%) brightness(1.08)"
+    ? "blur(52px) saturate(300%) brightness(1.22)"
     : "blur(28px) saturate(180%) brightness(1.04)";
 
   return (
@@ -157,8 +162,8 @@ const IdeaRow = memo(function IdeaRow({
         backdropFilter: cardBlur,
         WebkitBackdropFilter: cardBlur,
         boxShadow: isReordering
-          ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`
-          : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`,
+          ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,${glassMode ? 0.65 : 0.28}), inset 0 -1px 0 rgba(0,0,0,0.1)`
+          : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,${glassMode ? 0.55 : 0.28}), inset 0 -1px 0 rgba(0,0,0,0.1)`,
         userSelect: "none", WebkitUserSelect: "none",
         WebkitTapHighlightColor: "transparent",
         cursor: isReordering ? "grabbing" : "pointer",
