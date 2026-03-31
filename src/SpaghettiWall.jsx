@@ -445,9 +445,10 @@ export default function SpaghettiWall() {
     if (reorderingId === null) return;
     const dy = clientY - reorderStartY.current;
     setReorderY(dy);
-    setReorderTargetIdx(idx => {
-      const next = Math.max(0, Math.min(filtered.length - 1, reorderStartIdx.current + Math.round(dy / rowHeight)));
-      return next;
+    setReorderTargetIdx(() => {
+      // Swap at 65% travel so the dragged card visibly overlaps before neighbours jump
+      const steps = Math.floor(Math.abs(dy) / rowHeight + 0.35) * Math.sign(dy);
+      return Math.max(0, Math.min(filtered.length - 1, reorderStartIdx.current + steps));
     });
   };
 
@@ -506,15 +507,6 @@ export default function SpaghettiWall() {
     const hasMoved = useRef(false);
     const downY = useRef(0);
 
-    // Spring shift: slide other items out of the way while dragging
-    let shift = 0;
-    if (reorderingId && !isReordering && reorderTargetIdx !== null) {
-      const s = reorderStartIdx.current;
-      const tgt = reorderTargetIdx;
-      if (s < tgt && filteredIdx > s && filteredIdx <= tgt) shift = -rowHeight;
-      else if (s > tgt && filteredIdx >= tgt && filteredIdx < s) shift = rowHeight;
-    }
-
     return (
       <div
         onPointerDown={e => { hasMoved.current = false; downY.current = e.clientY; }}
@@ -524,23 +516,25 @@ export default function SpaghettiWall() {
         style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "14px 16px",
-          transition: isReordering ? "none" : "transform 0.3s cubic-bezier(0.34, 2.4, 0.64, 1), box-shadow 0.15s ease",
-          transform: isReordering ? `translateY(${reorderY}px)` : shift ? `translateY(${shift}px)` : "none",
-          zIndex: isReordering ? 100 : 1,
+          transition: isReordering ? "none" : "box-shadow 0.15s ease",
+          transform: isReordering ? `translateY(${reorderY}px)` : "none",
           position: "relative",
           marginBottom: 8,
-          background: isSpaghetti
-            ? "rgba(20,20,20,0.62)"
-            : isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.88)",
+          // ── Liquid glass ──────────────────────────────────────────────
+          // Gradient border via multi-layer background (padding-box/border-box trick):
+          // layer 1 = translucent fill clipped to the padding box (the card body)
+          // layer 2 = iridescent gradient clipped to the border box (visible only in the 1.5px border gap)
+          background: isDark || isSpaghetti
+            ? `rgba(255,255,255,0.07) padding-box, linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(160,220,255,0.35) 25%, rgba(210,160,255,0.25) 55%, rgba(255,200,140,0.2) 80%, rgba(255,255,255,0.45) 100%) border-box`
+            : `rgba(255,255,255,0.55) padding-box, linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(160,220,255,0.5) 25%, rgba(210,160,255,0.4) 55%, rgba(255,210,150,0.35) 80%, rgba(255,255,255,0.85) 100%) border-box`,
+          border: "1.5px solid transparent",
           borderRadius: 12,
-          border: isSpaghetti
-            ? "1px solid rgba(255,255,255,0.13)"
-            : isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.07)",
+          backdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
+          WebkitBackdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
           boxShadow: isReordering
-            ? "0 8px 24px rgba(0,0,0,0.18)"
-            : isSpaghetti ? "0 2px 12px rgba(0,0,0,0.35)" : isDark ? "none" : "0 1px 3px rgba(0,0,0,0.05)",
-          backdropFilter: isSpaghetti ? "blur(6px)" : "none",
-          WebkitBackdropFilter: isSpaghetti ? "blur(6px)" : "none",
+            ? `0 20px 48px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.22}), inset 0 1.5px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.12)`
+            : `0 2px 12px rgba(0,0,0,${isSpaghetti || isDark ? 0.38 : 0.1}), inset 0 1.5px 0 rgba(255,255,255,${isDark || isSpaghetti ? 0.2 : 0.7}), inset 0 -1px 0 rgba(0,0,0,0.06)`,
+          // ─────────────────────────────────────────────────────────────
           userSelect: "none", WebkitUserSelect: "none",
           cursor: isReordering ? "grabbing" : "pointer",
           touchAction: isReordering ? "none" : "pan-y",
@@ -731,11 +725,27 @@ export default function SpaghettiWall() {
         )}
 
         {/* Active ideas */}
-        {filtered.map((idea, filteredIdx) => (
-          <div key={idea.id} className="idea-row">
-            <IdeaRow idea={idea} idx={ideas.indexOf(idea)} filteredIdx={filteredIdx} />
-          </div>
-        ))}
+        {filtered.map((idea, filteredIdx) => {
+          // Shift neighbours in the stable key'd wrapper so CSS transitions actually fire
+          // (IdeaRow is an inner component — React remounts it every render, killing transitions)
+          let wrapShift = 0;
+          if (reorderingId && reorderingId !== idea.id && reorderTargetIdx !== null) {
+            const s = reorderStartIdx.current;
+            const tgt = reorderTargetIdx;
+            if (s < tgt && filteredIdx > s && filteredIdx <= tgt) wrapShift = -rowHeight;
+            else if (s > tgt && filteredIdx >= tgt && filteredIdx < s) wrapShift = rowHeight;
+          }
+          return (
+            <div key={idea.id} className="idea-row" style={{
+              position: "relative",
+              zIndex: reorderingId === idea.id ? 100 : 1,
+              transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
+              transition: "transform 0.28s cubic-bezier(0.2, 0, 0, 1)",
+            }}>
+              <IdeaRow idea={idea} idx={ideas.indexOf(idea)} filteredIdx={filteredIdx} />
+            </div>
+          );
+        })}
 
         {/* Bottom spacer for FAB */}
         <div style={{ height: 80 }} />
