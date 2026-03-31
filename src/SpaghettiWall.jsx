@@ -753,7 +753,7 @@ export default function SpaghettiWall() {
       {/* ─── Header — fixed, never scrolls ─── */}
       <header ref={headerRef} style={{
         padding: "16px 20px 10px",
-        background: isDark || isSpaghetti ? "rgba(13,13,13,0.97)" : "rgba(225,225,232,0.97)",
+        background: isDark || isSpaghetti ? "#0d0d0d" : "rgba(225,225,232,0.97)",
         backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
         borderBottom: `0.5px solid ${t.separator}`,
