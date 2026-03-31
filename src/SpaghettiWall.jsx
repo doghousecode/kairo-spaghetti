@@ -521,10 +521,8 @@ export default function SpaghettiWall() {
           position: "relative",
           marginBottom: 8,
           // ── Liquid glass ──────────────────────────────────────────────
-          background: isDark || isSpaghetti
-            ? `rgba(0,0,0,0.52) padding-box, linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(160,220,255,0.35) 25%, rgba(210,160,255,0.25) 55%, rgba(255,200,140,0.2) 80%, rgba(255,255,255,0.45) 100%) border-box`
-            : `rgba(255,255,255,0.72) padding-box, linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(160,220,255,0.5) 25%, rgba(210,160,255,0.4) 55%, rgba(255,210,150,0.35) 80%, rgba(255,255,255,0.85) 100%) border-box`,
-          border: "1.5px solid transparent",
+          background: isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)",
+          border: isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)",
           borderRadius: 12,
           backdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
           WebkitBackdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
