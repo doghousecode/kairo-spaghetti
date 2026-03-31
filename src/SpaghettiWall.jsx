@@ -92,7 +92,7 @@ function timeAgo(d) {
 const IdeaRow = memo(function IdeaRow({
   idea, filteredIdx, isReordering, reorderY,
   reorderingRef, onReorderStart,
-  t, isDark, isSpaghetti,
+  t, isDark, isSpaghetti, glassMode,
   setSelected, setNoteInput, setEditingTitle, cyclePriority,
 }) {
   const hasMoved = useRef(false);
@@ -858,6 +858,7 @@ export default function SpaghettiWall() {
                 t={t}
                 isDark={isDark}
                 isSpaghetti={isSpaghetti}
+                glassMode={glassMode}
                 setSelected={setSelected}
                 setNoteInput={setNoteInput}
                 setEditingTitle={setEditingTitle}
