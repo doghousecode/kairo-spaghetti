@@ -788,13 +788,13 @@ export default function SpaghettiWall() {
           </div>
         </div>
 
-        {/* Liquid Glass toggle — own row, right-aligned, between theme toggle and search */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+        {/* Liquid Glass toggle — own row, right-aligned, same width as theme toggle */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
           <button
             onClick={() => setGlassMode(g => !g)}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              height: 32, paddingInline: 12, borderRadius: 8, border: "none",
+              width: 138, height: 32, borderRadius: 8, border: "none",
               background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
               color: glassMode ? t.accent : t.textSecondary,
               fontSize: 12, fontWeight: 600, cursor: "pointer",
