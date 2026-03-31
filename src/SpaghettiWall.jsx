@@ -104,9 +104,10 @@ const IdeaRow = memo(function IdeaRow({
 
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
-  const cardBg = isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
-  const cardBorder = isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
-  const cardBlur = "blur(28px) saturate(180%) brightness(1.04)";
+  const isLiquid = glassMode && isSpaghetti;
+  const cardBg = isLiquid ? "rgba(0,0,0,0.12)" : isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)";
+  const cardBorder = isLiquid ? "1.5px solid rgba(255,255,255,0.22)" : isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)";
+  const cardBlur = isLiquid ? "blur(44px) saturate(260%) brightness(1.1) contrast(1.04)" : "blur(28px) saturate(180%) brightness(1.04)";
 
   return (
     <div
@@ -149,10 +150,19 @@ const IdeaRow = memo(function IdeaRow({
         marginBottom: 8,
         background: cardBg,
         border: cardBorder,
-        borderRadius: 12,
+        borderRadius: isLiquid ? 20 : 12,
         backdropFilter: cardBlur,
         WebkitBackdropFilter: cardBlur,
-        boxShadow: isReordering
+        boxShadow: isLiquid
+          ? [
+              `0 ${isReordering ? 22 : 6}px ${isReordering ? 52 : 28}px rgba(0,0,0,${isReordering ? 0.62 : 0.48})`,
+              "inset 0 1px 0 rgba(255,255,255,0.28)",
+              "inset 0 -1px 0 rgba(0,0,0,0.2)",
+              "inset 1px 0 0 rgba(255,255,255,0.09)",
+              "inset -1px 0 0 rgba(255,255,255,0.09)",
+              "0 0 0 0.5px rgba(255,255,255,0.12)",
+            ].join(", ")
+          : isReordering
           ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,${glassMode ? 0.65 : 0.28}), inset 0 -1px 0 rgba(0,0,0,0.1)`
           : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,${glassMode ? 0.55 : 0.28}), inset 0 -1px 0 rgba(0,0,0,0.1)`,
         userSelect: "none", WebkitUserSelect: "none",
@@ -160,6 +170,31 @@ const IdeaRow = memo(function IdeaRow({
         cursor: isReordering ? "grabbing" : "pointer",
       }}
     >
+      {/* Liquid glass layers — lens zoom + shimmer (spaghetti mode only) */}
+      {isLiquid && (
+        <>
+          {/* Lens: fixed-position zoomed copy of the wallpaper creates magnification.
+              z-index:-1 puts it above card background but below flex content. */}
+          <div className="glass-lens" style={{
+            position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
+            pointerEvents: "none", zIndex: -1,
+            backgroundImage: 'url("/spag.jpg")',
+            backgroundAttachment: "fixed",
+            opacity: 0.22,
+          }} />
+          {/* Shimmer: slow diagonal light band sweeping across */}
+          <div style={{
+            position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
+            pointerEvents: "none", zIndex: -1,
+          }}>
+            <div className="glass-shimmer" style={{
+              position: "absolute", top: 0, bottom: 0, left: 0, width: "45%",
+              background: "linear-gradient(to right, transparent, rgba(255,255,255,0.07) 50%, transparent)",
+              transform: "skewX(-12deg)",
+            }} />
+          </div>
+        </>
+      )}
       {/* Priority indicator */}
       <button
         onPointerDown={e => e.stopPropagation()}
@@ -703,6 +738,15 @@ export default function SpaghettiWall() {
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); } }
         @media (max-width: 768px) { .spaghetti-wallpaper { background-size: 300% !important; background-position: center 40% !important; } }
+        .glass-lens { background-size: 115%; background-position: center; }
+        @media (max-width: 768px) { .glass-lens { background-size: 390% !important; background-position: center 40% !important; } }
+        @keyframes glass-shimmer {
+          0% { transform: translateX(-200%) skewX(-12deg); opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { transform: translateX(400%) skewX(-12deg); opacity: 0; }
+        }
+        .glass-shimmer { animation: glass-shimmer 7s ease-in-out infinite; }
         .btn-secondary { transition: all 0.15s ease; }
         .btn-secondary:hover { opacity: 0.8; }
         .btn-secondary:active { transform: scale(0.97); }
@@ -843,10 +887,7 @@ export default function SpaghettiWall() {
                 transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
                 transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
                 touchAction: "pan-y",
-                // Glass mode: brightness on the wrapper (same technique as the old
-                // :active CSS that produced the correct look — brightens the dark card
-                // making it appear luminous/glassy without touching backdrop-filter)
-                filter: glassMode ? "brightness(1.5)" : undefined,
+                filter: undefined,
               }}>
               <IdeaRow
                 idea={idea}
