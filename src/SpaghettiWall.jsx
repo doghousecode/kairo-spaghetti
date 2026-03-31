@@ -793,8 +793,8 @@ export default function SpaghettiWall() {
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 height: 32, borderRadius: 8, border: "none",
-                background: glassMode ? "rgba(0,122,255,0.18)" : t.inputBg,
-                color: glassMode ? t.accent : t.textSecondary,
+                background: glassMode ? "rgba(42,58,106,0.5)" : t.inputBg,
+                color: glassMode ? "#5b80e8" : t.textSecondary,
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
                 transition: "all 0.2s ease",
               }}
@@ -916,8 +916,8 @@ export default function SpaghettiWall() {
       {!capturing && !selected && (
         <button onClick={() => setCapturing(true)} style={{
           position: "fixed", bottom: 24, right: 24, width: 56, height: 56, borderRadius: "50%",
-          border: "none", background: t.accent, color: "#fff", fontSize: 28, fontWeight: 300,
-          cursor: "pointer", boxShadow: "0 4px 16px rgba(0,122,255,0.35)",
+          border: "none", background: "#5b80e8", color: "#fff", fontSize: 28, fontWeight: 300,
+          cursor: "pointer", boxShadow: "0 4px 16px rgba(91,128,232,0.45)",
           display: "flex", alignItems: "center", justifyContent: "center", zIndex: 40,
           transition: "transform 0.15s ease, box-shadow 0.15s ease",
         }}>+</button>
