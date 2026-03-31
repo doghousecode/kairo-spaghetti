@@ -643,8 +643,8 @@ export default function SpaghettiWall() {
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); } }
         @media (max-width: 768px) { .spaghetti-wallpaper { background-size: 300% !important; background-position: center 40% !important; } }
-        .idea-row:hover { filter: brightness(${isDark ? "1.12" : "0.97"}); }
-        .idea-row:active { filter: brightness(${isDark ? "1.18" : "0.94"}); }
+        .idea-row:hover { filter: brightness(${isDark ? "1.04" : "0.995"}); }
+        .idea-row:active { filter: none; }
         .btn-secondary { transition: all 0.15s ease; }
         .btn-secondary:hover { opacity: 0.8; }
         .btn-secondary:active { transform: scale(0.97); }
