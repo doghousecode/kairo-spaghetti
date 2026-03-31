@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, memo } from "react";
 
 // ─── Storage ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "kairo-sw-v1";
@@ -62,6 +62,130 @@ function tagColor(tag) {
 
 // ─── Spaghetti wallpaper ──────────────────────────────────────────────
 const spaghettiWallpaper = `url("/spag.jpg")`;
+
+// ─── Priority config (module-level so IdeaRow can access it) ──────────
+const PRIORITIES = [
+  { key: "none",   label: "—",    color: "transparent" },
+  { key: "low",    label: "Low",  color: "#34C759" },
+  { key: "medium", label: "Med",  color: "#FF9500" },
+  { key: "high",   label: "High", color: "#FF3B30" },
+];
+const getPriority = (key) => PRIORITIES.find(p => p.key === key) || PRIORITIES[0];
+
+// ─── Time helper (pure, module-level) ─────────────────────────────────
+function timeAgo(d) {
+  const diff = Date.now() - new Date(d).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "Just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+// ─── IdeaRow (outside SpaghettiWall so React reconciles rather than
+//     remounting on every parent render — critical for stable CSS state
+//     and flicker-free drag. React.memo prevents re-renders unless the
+//     specific idea's props actually change.) ───────────────────────────
+const IdeaRow = memo(function IdeaRow({
+  idea, filteredIdx, isReordering, reorderY,
+  reorderingRef, onReorderStart,
+  t, isDark, isSpaghetti,
+  setSelected, setNoteInput, setEditingTitle, cyclePriority,
+}) {
+  const hasMoved = useRef(false);
+  const downY = useRef(0);
+  const pri = getPriority(idea.priority);
+
+  return (
+    <div
+      onPointerDown={e => { hasMoved.current = false; downY.current = e.clientY; }}
+      onPointerMove={e => {
+        if (Math.abs(e.clientY - downY.current) > 8) {
+          hasMoved.current = true;
+          if (!reorderingRef.current) {
+            reorderingRef.current = idea.id;
+            e.currentTarget.setPointerCapture(e.pointerId);
+            onReorderStart(idea.id, filteredIdx, downY.current);
+          }
+        }
+      }}
+      onPointerUp={() => { if (!hasMoved.current && !reorderingRef.current) { setSelected(idea); setNoteInput(""); setEditingTitle(false); } }}
+      onPointerCancel={() => { hasMoved.current = true; }}
+      style={{
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "14px 16px",
+        transition: "box-shadow 0.15s ease",
+        transform: isReordering ? `translateY(${reorderY}px)` : "none",
+        position: "relative",
+        marginBottom: 8,
+        background: isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)",
+        border: isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)",
+        borderRadius: 12,
+        backdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
+        WebkitBackdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
+        boxShadow: isReordering
+          ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`
+          : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`,
+        userSelect: "none", WebkitUserSelect: "none",
+        WebkitTapHighlightColor: "transparent",
+        cursor: isReordering ? "grabbing" : "pointer",
+      }}
+    >
+      {/* Priority indicator */}
+      <button
+        onPointerDown={e => e.stopPropagation()}
+        onPointerUp={e => e.stopPropagation()}
+        onClick={e => { e.stopPropagation(); cyclePriority(idea.id); }}
+        style={{
+          width: 6, minHeight: 40, borderRadius: 3, flexShrink: 0,
+          background: pri.color === "transparent" ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)") : pri.color,
+          border: "none", cursor: "pointer", padding: 0,
+          transition: "background 0.2s ease",
+        }} />
+
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 16, fontWeight: 500, color: t.text, lineHeight: 1.3,
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>{idea.title}</div>
+        {idea.text && (
+          <div style={{
+            fontSize: 13, color: t.textSecondary, lineHeight: 1.4, marginTop: 2,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          }}>{idea.text.length > 80 ? idea.text.slice(0, 80) + "…" : idea.text}</div>
+        )}
+        {(idea.tags || []).length > 0 && (
+          <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
+            {idea.tags.slice(0, 3).map(tg => (
+              <span key={tg} style={{
+                fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 4,
+                background: `${tagColor(tg)}18`, color: tagColor(tg),
+              }}>{tg}</span>
+            ))}
+            {idea.tags.length > 3 && <span style={{ fontSize: 11, color: t.textTertiary }}>+{idea.tags.length - 3}</span>}
+          </div>
+        )}
+      </div>
+
+      {/* Meta */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+        <span style={{ fontSize: 12, color: t.textTertiary }}>{timeAgo(idea.createdAt)}</span>
+        <div style={{ display: "flex", gap: 6 }}>
+          {(idea.notes || []).length > 0 && <span style={{ fontSize: 11, color: t.textTertiary }}>💬{idea.notes.length}</span>}
+          {(idea.attachments || []).length > 0 && <span style={{ fontSize: 11, color: t.textTertiary }}>📎{idea.attachments.length}</span>}
+        </div>
+      </div>
+
+      {/* Drag handle — visual affordance only, pointer events handled by full card */}
+      <div style={{ color: t.textTertiary, fontSize: 18, padding: "4px 4px 4px 8px", flexShrink: 0,
+        opacity: 0.4, pointerEvents: "none", userSelect: "none" }}>⠿</div>
+    </div>
+  );
+});
 
 // ─── App ─────────────────────────────────────────────────────────────
 export default function SpaghettiWall() {
@@ -277,7 +401,9 @@ export default function SpaghettiWall() {
   const isDark = themeMode === "dark" || (themeMode === "auto" && systemDark) || themeMode === "spaghetti";
   const isSpaghetti = themeMode === "spaghetti";
 
-  const t = {
+  // useMemo so the object reference is stable between renders — lets React.memo
+  // on IdeaRow do its job (a new object literal every render would bust the memo).
+  const t = useMemo(() => ({
     bg: isSpaghetti ? "#B52A1C" : isDark ? "#000000" : "#F2F2F7",
     bgSecondary: isDark ? "#1C1C1E" : "#FFFFFF",
     bgTertiary: isDark ? "#2C2C2E" : "#F2F2F7",
@@ -292,7 +418,7 @@ export default function SpaghettiWall() {
     cardShadowHover: isDark ? "0 4px 12px rgba(0,0,0,0.4)" : "0 4px 12px rgba(0,0,0,0.12)",
     inputBg: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
     backdrop: isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.3)",
-  };
+  }), [isDark, isSpaghetti]);
 
   // ─── Helpers ───────────────────────────────────────────────────────
   const toggleVoice = () => {
@@ -306,18 +432,6 @@ export default function SpaghettiWall() {
   const updateIdea = (id, patch) => {
     setIdeas(p => p.map(i => i.id === id ? { ...i, ...patch } : i));
     setSelected(p => p && p.id === id ? { ...p, ...patch } : p);
-  };
-
-  const timeAgo = (d) => {
-    const diff = Date.now() - new Date(d).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return "Just now";
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    const days = Math.floor(h / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   };
 
   // ─── Actions ───────────────────────────────────────────────────────
@@ -434,7 +548,7 @@ export default function SpaghettiWall() {
   const rowHeightRef = useRef(88);     // measured at drag-start; 88 is a safe fallback
   useEffect(() => { reorderingRef.current = reorderingId; }, [reorderingId]);
 
-  const onReorderStart = (id, filteredIdx, clientY) => {
+  const onReorderStart = useCallback((id, filteredIdx, clientY) => {
     reorderingRef.current = id;                                   // synchronous — container can see it immediately
     const el = rowRefs.current.get(id);
     if (el) rowHeightRef.current = el.getBoundingClientRect().height + 8;
@@ -443,7 +557,7 @@ export default function SpaghettiWall() {
     reorderStartIdx.current = filteredIdx;
     setReorderY(0);
     setReorderTargetIdx(filteredIdx);
-  };
+  }, []); // stable — only uses refs and stable setters
 
   const onReorderMove = (clientY) => {
     if (!reorderingRef.current) return;                           // use synchronous ref
@@ -481,23 +595,20 @@ export default function SpaghettiWall() {
     setReorderTargetIdx(null);
   };
 
-  // Priority helpers
-  const PRIORITIES = [
-    { key: "none", label: "—", color: "transparent" },
-    { key: "low", label: "Low", color: "#34C759" },
-    { key: "medium", label: "Med", color: "#FF9500" },
-    { key: "high", label: "High", color: "#FF3B30" },
-  ];
-
-  const cyclePriority = (id) => {
-    const idea = ideas.find(i => i.id === id);
-    if (!idea) return;
+  // cyclePriority uses useCallback so IdeaRow's React.memo sees a stable reference
+  const cyclePriority = useCallback((id) => {
     const keys = PRIORITIES.map(p => p.key);
-    const next = keys[(keys.indexOf(idea.priority || "none") + 1) % keys.length];
-    updateIdea(id, { priority: next });
-  };
-
-  const getPriority = (key) => PRIORITIES.find(p => p.key === key) || PRIORITIES[0];
+    setIdeas(prev => prev.map(i => {
+      if (i.id !== id) return i;
+      const next = keys[(keys.indexOf(i.priority || "none") + 1) % keys.length];
+      return { ...i, priority: next };
+    }));
+    setSelected(prev => {
+      if (!prev || prev.id !== id) return prev;
+      const next = keys[(keys.indexOf(prev.priority || "none") + 1) % keys.length];
+      return { ...prev, priority: next };
+    });
+  }, []); // stable — only uses module-level PRIORITIES and stable useState setters
 
   // ─── Filter ────────────────────────────────────────────────────────
   const allTags = [...new Set(ideas.flatMap(i => i.tags || []))].sort();
@@ -506,106 +617,6 @@ export default function SpaghettiWall() {
     if (searchQ) { const q = searchQ.toLowerCase(); return i.title.toLowerCase().includes(q) || i.text.toLowerCase().includes(q) || (i.tags||[]).some(tt => tt.includes(q)); }
     return true;
   });
-
-  // ─── Render ────────────────────────────────────────────────────────
-  const IdeaRow = ({ idea, idx, filteredIdx }) => {
-    const isReordering = reorderingId === idea.id;
-    const pri = getPriority(idea.priority);
-    const hasMoved = useRef(false);
-    const downY = useRef(0);
-
-    return (
-      <div
-        onPointerDown={e => { hasMoved.current = false; downY.current = e.clientY; }}
-        onPointerMove={e => {
-          if (Math.abs(e.clientY - downY.current) > 8) {
-            hasMoved.current = true;
-            // Start drag on first threshold cross — no grab dot needed
-            if (!reorderingRef.current) {
-              reorderingRef.current = idea.id;                   // synchronous so container sees it
-              e.currentTarget.setPointerCapture(e.pointerId);
-              onReorderStart(idea.id, filteredIdx, downY.current);
-            }
-          }
-        }}
-        onPointerUp={() => { if (!hasMoved.current && !reorderingRef.current) { setSelected(idea); setNoteInput(""); setEditingTitle(false); } }}
-        onPointerCancel={() => { hasMoved.current = true; }}
-        style={{
-          display: "flex", alignItems: "center", gap: 12,
-          padding: "14px 16px",
-          transition: "box-shadow 0.15s ease",
-          transform: isReordering ? `translateY(${reorderY}px)` : "none",
-          position: "relative",
-          marginBottom: 8,
-          // ── Liquid glass ──────────────────────────────────────────────
-          background: isDark || isSpaghetti ? "rgba(0,0,0,0.52)" : "rgba(255,255,255,0.72)",
-          border: isDark || isSpaghetti ? "1.5px solid rgba(255,255,255,0.16)" : "1.5px solid rgba(255,255,255,0.85)",
-          borderRadius: 12,
-          backdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
-          WebkitBackdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
-          boxShadow: isReordering
-            ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`
-            : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`,
-          // ─────────────────────────────────────────────────────────────
-          userSelect: "none", WebkitUserSelect: "none",
-          WebkitTapHighlightColor: "transparent",
-          cursor: isReordering ? "grabbing" : "pointer",
-          // touchAction handled by wrapper div
-        }}
-      >
-        {/* Priority indicator — stops propagation so it doesn't trigger tap-to-open */}
-        <button
-          onPointerDown={e => e.stopPropagation()}
-          onPointerUp={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); cyclePriority(idea.id); }}
-          style={{
-            width: 6, minHeight: 40, borderRadius: 3, flexShrink: 0,
-            background: pri.color === "transparent" ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)") : pri.color,
-            border: "none", cursor: "pointer", padding: 0,
-            transition: "background 0.2s ease",
-          }} />
-
-        {/* Content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 16, fontWeight: 500, color: t.text, lineHeight: 1.3,
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          }}>{idea.title}</div>
-          {idea.text && (
-            <div style={{
-              fontSize: 13, color: t.textSecondary, lineHeight: 1.4, marginTop: 2,
-              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-            }}>{idea.text.length > 80 ? idea.text.slice(0, 80) + "…" : idea.text}</div>
-          )}
-          {(idea.tags || []).length > 0 && (
-            <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
-              {idea.tags.slice(0, 3).map(tg => (
-                <span key={tg} style={{
-                  fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 4,
-                  background: `${tagColor(tg)}18`, color: tagColor(tg),
-                }}>{tg}</span>
-              ))}
-              {idea.tags.length > 3 && <span style={{ fontSize: 11, color: t.textTertiary }}>+{idea.tags.length - 3}</span>}
-            </div>
-          )}
-        </div>
-
-        {/* Meta */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
-          <span style={{ fontSize: 12, color: t.textTertiary }}>{timeAgo(idea.createdAt)}</span>
-          <div style={{ display: "flex", gap: 6 }}>
-            {(idea.notes || []).length > 0 && <span style={{ fontSize: 11, color: t.textTertiary }}>💬{idea.notes.length}</span>}
-            {(idea.attachments || []).length > 0 && <span style={{ fontSize: 11, color: t.textTertiary }}>📎{idea.attachments.length}</span>}
-          </div>
-        </div>
-
-        {/* Drag handle — visual affordance only, pointer events handled by full card */}
-        <div style={{ color: t.textTertiary, fontSize: 18, padding: "4px 4px 4px 8px", flexShrink: 0,
-          opacity: 0.4, pointerEvents: "none", userSelect: "none" }}>⠿</div>
-
-      </div>
-    );
-  };
 
   return (
     <div
@@ -737,10 +748,11 @@ export default function SpaghettiWall() {
 
         {/* Active ideas */}
         {filtered.map((idea, filteredIdx) => {
-          // Shift neighbours in the stable key'd wrapper so CSS transitions actually fire
-          // (IdeaRow is an inner component — React remounts it every render, killing transitions)
+          const isReordering = reorderingId === idea.id;
+          // Neighbour shift lives on the stable key'd wrapper — IdeaRow (now memo'd + external)
+          // only re-renders when its own props change, not on every drag-move event.
           let wrapShift = 0;
-          if (reorderingId && reorderingId !== idea.id && reorderTargetIdx !== null) {
+          if (reorderingId && !isReordering && reorderTargetIdx !== null) {
             const s = reorderStartIdx.current;
             const tgt = reorderTargetIdx;
             const rh = rowHeightRef.current;
@@ -751,13 +763,27 @@ export default function SpaghettiWall() {
             <div key={idea.id} className="idea-row"
               ref={el => el ? rowRefs.current.set(idea.id, el) : rowRefs.current.delete(idea.id)}
               style={{
-              position: "relative",
-              zIndex: reorderingId === idea.id ? 100 : 1,
-              transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
-              transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
-              touchAction: "none",
-            }}>
-              <IdeaRow idea={idea} idx={ideas.indexOf(idea)} filteredIdx={filteredIdx} />
+                position: "relative",
+                zIndex: isReordering ? 100 : 1,
+                transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
+                transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
+                touchAction: "none",
+              }}>
+              <IdeaRow
+                idea={idea}
+                filteredIdx={filteredIdx}
+                isReordering={isReordering}
+                reorderY={isReordering ? reorderY : 0}
+                reorderingRef={reorderingRef}
+                onReorderStart={onReorderStart}
+                t={t}
+                isDark={isDark}
+                isSpaghetti={isSpaghetti}
+                setSelected={setSelected}
+                setNoteInput={setNoteInput}
+                setEditingTitle={setEditingTitle}
+                cyclePriority={cyclePriority}
+              />
             </div>
           );
         })}
