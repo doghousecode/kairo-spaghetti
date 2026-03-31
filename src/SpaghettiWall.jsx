@@ -805,32 +805,36 @@ export default function SpaghettiWall() {
         </div>
 
         {/* Search */}
-        <div style={{ position: "relative", marginBottom: allTags.length > 0 ? 8 : 0 }}>
-          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: t.textTertiary }}>🔍</span>
+        <div style={{ marginBottom: allTags.length > 0 ? 8 : 0 }}>
           <input
             type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
-            placeholder="Search"
+            placeholder="Search ideas…"
             style={{
-              width: "100%", padding: "8px 12px 8px 32px", borderRadius: 10, border: "none",
-              background: t.inputBg, color: t.text, fontSize: 16, outline: "none",
+              width: "100%", padding: "9px 14px", borderRadius: 12,
+              border: `1px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+              background: t.inputBg, color: t.text, fontSize: 15, outline: "none",
             }}
           />
         </div>
 
         {/* Tag filters */}
         {allTags.length > 0 && (
-          <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 2 }}>
-            {allTags.slice(0, 10).map(tg => (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 2 }}>
+            {allTags.slice(0, 20).map(tg => (
               <button key={tg} onClick={() => setFilterTags(p => p.includes(tg) ? p.filter(x => x !== tg) : [...p, tg])} style={{
-                padding: "4px 10px", borderRadius: 14, border: "none", whiteSpace: "nowrap",
-                background: filterTags.includes(tg) ? t.accent : t.inputBg,
+                padding: "4px 12px", borderRadius: 20,
+                border: filterTags.includes(tg)
+                  ? "1.5px solid transparent"
+                  : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
+                background: filterTags.includes(tg) ? t.accent : "transparent",
                 color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
                 fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
+                whiteSpace: "nowrap",
               }}>{tg}</button>
             ))}
             {filterTags.length > 0 && (
               <button onClick={() => setFilterTags([])} style={{
-                padding: "4px 8px", borderRadius: 14, border: "none",
+                padding: "4px 10px", borderRadius: 20, border: "none",
                 background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
               }}>Clear</button>
             )}
