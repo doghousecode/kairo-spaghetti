@@ -240,6 +240,7 @@ export default function SpaghettiWall() {
   const [listening, setListening] = useState(false);
   const [recording, setRecording] = useState(false);
   const [systemDark, setSystemDark] = useState(window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const fileRef = useRef(null);
   const detailFileRef = useRef(null);
@@ -255,10 +256,14 @@ export default function SpaghettiWall() {
   const reorderingRef = useRef(null);
   const loadedRef = useRef(false);
   const headerRef = useRef(null);
+  const themeModeRef = useRef("auto");
+  const glassModeRef = useRef(false);
   const [headerHeight, setHeaderHeight] = useState(160);
 
   useEffect(() => { selRef.current = selected; setSheetDY(0); setDismissing(false); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
+  useEffect(() => { themeModeRef.current = themeMode; }, [themeMode]);
+  useEffect(() => { glassModeRef.current = glassMode; }, [glassMode]);
 
   // Non-passive touchmove: prevent page scroll during drag (React's synthetic onTouchMove is passive)
   useEffect(() => {
@@ -275,6 +280,23 @@ export default function SpaghettiWall() {
     const handler = (e) => setSystemDark(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Online/offline tracking — show indicator and sync to server on reconnect
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (loadedRef.current) {
+        saveData({ ideas: ideasRef.current, themeMode: themeModeRef.current, glassMode: glassModeRef.current });
+      }
+    };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   // Visual viewport — push capture sheet above keyboard on iOS
@@ -769,6 +791,17 @@ export default function SpaghettiWall() {
                 background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
               }}>Clear</button>
             )}
+          </div>
+        )}
+
+        {/* Offline banner */}
+        {!isOnline && (
+          <div style={{
+            marginTop: 8, padding: "5px 12px", borderRadius: 8, textAlign: "center",
+            background: "rgba(255,149,0,0.18)", border: "1px solid rgba(255,149,0,0.35)",
+            fontSize: 12, fontWeight: 500, color: isDark ? "#FFCC00" : "#8A5A00",
+          }}>
+            Offline — changes saved locally, will sync when reconnected
           </div>
         )}
       </header>
