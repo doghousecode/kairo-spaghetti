@@ -516,24 +516,23 @@ export default function SpaghettiWall() {
         style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "14px 16px",
-          transition: isReordering ? "none" : "box-shadow 0.15s ease",
+          transition: "box-shadow 0.15s ease",
           transform: isReordering ? `translateY(${reorderY}px)` : "none",
           position: "relative",
           marginBottom: 8,
           // ── Liquid glass ──────────────────────────────────────────────
-          // Gradient border via multi-layer background (padding-box/border-box trick):
-          // layer 1 = translucent fill clipped to the padding box (the card body)
-          // layer 2 = iridescent gradient clipped to the border box (visible only in the 1.5px border gap)
           background: isDark || isSpaghetti
-            ? `rgba(255,255,255,0.07) padding-box, linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(160,220,255,0.35) 25%, rgba(210,160,255,0.25) 55%, rgba(255,200,140,0.2) 80%, rgba(255,255,255,0.45) 100%) border-box`
-            : `rgba(255,255,255,0.55) padding-box, linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(160,220,255,0.5) 25%, rgba(210,160,255,0.4) 55%, rgba(255,210,150,0.35) 80%, rgba(255,255,255,0.85) 100%) border-box`,
+            ? `rgba(0,0,0,0.52) padding-box, linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(160,220,255,0.35) 25%, rgba(210,160,255,0.25) 55%, rgba(255,200,140,0.2) 80%, rgba(255,255,255,0.45) 100%) border-box`
+            : `rgba(255,255,255,0.72) padding-box, linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(160,220,255,0.5) 25%, rgba(210,160,255,0.4) 55%, rgba(255,210,150,0.35) 80%, rgba(255,255,255,0.85) 100%) border-box`,
           border: "1.5px solid transparent",
           borderRadius: 12,
           backdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
           WebkitBackdropFilter: "blur(28px) saturate(180%) brightness(1.04)",
+          // Inset shadows are identical for both states — only the outer drop shadow
+          // changes on lift, avoiding any flicker when grabbing
           boxShadow: isReordering
-            ? `0 20px 48px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.22}), inset 0 1.5px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.12)`
-            : `0 2px 12px rgba(0,0,0,${isSpaghetti || isDark ? 0.38 : 0.1}), inset 0 1.5px 0 rgba(255,255,255,${isDark || isSpaghetti ? 0.2 : 0.7}), inset 0 -1px 0 rgba(0,0,0,0.06)`,
+            ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`
+            : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.1)`,
           // ─────────────────────────────────────────────────────────────
           userSelect: "none", WebkitUserSelect: "none",
           cursor: isReordering ? "grabbing" : "pointer",
