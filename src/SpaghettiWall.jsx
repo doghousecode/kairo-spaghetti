@@ -254,6 +254,11 @@ export default function SpaghettiWall() {
   const [glassMode, setGlassMode] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").glassMode ?? false; } catch(e) { return false; }
   });
+  const [sortBy, setSortBy] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").sortBy || "modified"; } catch(e) { return "modified"; }
+  });
+  const sortByRef = useRef("modified");
+  useEffect(() => { sortByRef.current = sortBy; }, [sortBy]);
   const [input, setInput] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
@@ -323,7 +328,7 @@ export default function SpaghettiWall() {
     const handleOnline = () => {
       setIsOnline(true);
       if (loadedRef.current) {
-        saveData({ ideas: ideasRef.current, themeMode: themeModeRef.current, glassMode: glassModeRef.current });
+        saveData({ ideas: ideasRef.current, themeMode: themeModeRef.current, glassMode: glassModeRef.current, sortBy: sortByRef.current });
       }
     };
     const handleOffline = () => setIsOnline(false);
@@ -443,9 +448,9 @@ export default function SpaghettiWall() {
   // loadedRef guard prevents wiping data before initial load completes
   useEffect(() => {
     if (!loadedRef.current) return;
-    const t = setTimeout(() => saveData({ ideas, themeMode, glassMode }), 800);
+    const t = setTimeout(() => saveData({ ideas, themeMode, glassMode, sortBy }), 800);
     return () => clearTimeout(t);
-  }, [ideas, themeMode, glassMode]);
+  }, [ideas, themeMode, glassMode, sortBy]);
 
   // Retry AI analysis for ideas that were captured while offline
   useEffect(() => {
@@ -515,8 +520,9 @@ export default function SpaghettiWall() {
   const readFile = (f) => new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(f); });
 
   const updateIdea = (id, patch) => {
-    setIdeas(p => p.map(i => i.id === id ? { ...i, ...patch } : i));
-    setSelected(p => p && p.id === id ? { ...p, ...patch } : p);
+    const ts = new Date().toISOString();
+    setIdeas(p => p.map(i => i.id === id ? { ...i, ...patch, updatedAt: ts } : i));
+    setSelected(p => p && p.id === id ? { ...p, ...patch, updatedAt: ts } : p);
   };
 
   // ─── Actions ───────────────────────────────────────────────────────
@@ -532,7 +538,7 @@ export default function SpaghettiWall() {
       connections: (analysis.connections || []).map(Number).filter(n => !isNaN(n)),
       notes: [],
       attachments: captureImage ? [{ type: "image", data: captureImage, at: new Date().toISOString() }] : [],
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       priority: "none",
       needsAnalysis: analysis._failed ? true : undefined,
     };
@@ -635,6 +641,7 @@ export default function SpaghettiWall() {
   useEffect(() => { reorderingRef.current = reorderingId; }, [reorderingId]);
 
   const onReorderStart = useCallback((id, filteredIdx, clientY) => {
+    if (sortByRef.current !== "none") return; // drag disabled when sorted
     reorderingRef.current = id;                                   // synchronous — container can see it immediately
     const el = rowRefs.current.get(id);
     if (el) rowHeightRef.current = el.getBoundingClientRect().height + 8;
@@ -696,12 +703,20 @@ export default function SpaghettiWall() {
     });
   }, []); // stable — only uses module-level PRIORITIES and stable useState setters
 
-  // ─── Filter ────────────────────────────────────────────────────────
+  // ─── Filter + Sort ─────────────────────────────────────────────────
+  const PRIORITY_WEIGHT = { none: 0, low: 1, medium: 2, high: 3 };
   const allTags = [...new Set(ideas.flatMap(i => i.tags || []))].sort();
   const filtered = ideas.filter(i => {
     if (filterTags.length && !filterTags.some(ft => (i.tags || []).includes(ft))) return false;
     if (searchQ) { const q = searchQ.toLowerCase(); return i.title.toLowerCase().includes(q) || i.text.toLowerCase().includes(q) || (i.tags||[]).some(tt => tt.includes(q)); }
     return true;
+  });
+  const displayed = sortBy === "none" ? filtered : [...filtered].sort((a, b) => {
+    if (sortBy === "priority") {
+      const pw = (PRIORITY_WEIGHT[b.priority || "none"] || 0) - (PRIORITY_WEIGHT[a.priority || "none"] || 0);
+      if (pw !== 0) return pw;
+    }
+    return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
   });
 
   return (
@@ -821,7 +836,7 @@ export default function SpaghettiWall() {
 
         {/* Search + Tags — scrolls with content */}
         <div style={{ marginBottom: 12, padding: "0 4px" }}>
-          <div style={{ marginBottom: allTags.length > 0 ? 8 : 0 }}>
+          <div style={{ marginBottom: 8 }}>
             <input
               type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
               placeholder="Search ideas…"
@@ -833,28 +848,38 @@ export default function SpaghettiWall() {
               }}
             />
           </div>
-          {allTags.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 2 }}>
-              {allTags.slice(0, 20).map(tg => (
-                <button key={tg} onClick={() => setFilterTags(p => p.includes(tg) ? p.filter(x => x !== tg) : [...p, tg])} style={{
-                  padding: "4px 12px", borderRadius: 20,
-                  border: filterTags.includes(tg)
-                    ? "1.5px solid transparent"
-                    : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
-                  background: filterTags.includes(tg) ? "#5b80e8" : isSpaghetti ? "rgba(0,0,0,0.45)" : "transparent",
-                  color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
-                  fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
-                  whiteSpace: "nowrap",
-                }}>{tg}</button>
+          {/* Tags + sort toggle — always render this row */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 2, alignItems: "center" }}>
+            {allTags.slice(0, 20).map(tg => (
+              <button key={tg} onClick={() => setFilterTags(p => p.includes(tg) ? p.filter(x => x !== tg) : [...p, tg])} style={{
+                padding: "4px 12px", borderRadius: 20,
+                border: filterTags.includes(tg)
+                  ? "1.5px solid transparent"
+                  : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
+                background: filterTags.includes(tg) ? "#5b80e8" : isSpaghetti ? "rgba(0,0,0,0.45)" : "transparent",
+                color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
+                fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
+                whiteSpace: "nowrap",
+              }}>{tg}</button>
+            ))}
+            {filterTags.length > 0 && (
+              <button onClick={() => setFilterTags([])} style={{
+                padding: "4px 10px", borderRadius: 20, border: "none",
+                background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
+              }}>Clear</button>
+            )}
+            {/* Sort toggle — always visible, pushed to the right */}
+            <div style={{ marginLeft: "auto", display: "flex", gap: 1, background: t.inputBg, borderRadius: 8, padding: 2, flexShrink: 0 }}>
+              {[{ key: "modified", label: "Recent" }, { key: "priority", label: "Priority" }].map(opt => (
+                <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
+                  padding: "3px 9px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 500,
+                  background: sortBy === opt.key ? (isDark || isSpaghetti ? "rgba(255,255,255,0.12)" : t.bgElevated) : "transparent",
+                  color: sortBy === opt.key ? (isSpaghetti || isDark ? "#5b80e8" : t.text) : t.textTertiary,
+                  cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap",
+                }}>{opt.label}</button>
               ))}
-              {filterTags.length > 0 && (
-                <button onClick={() => setFilterTags([])} style={{
-                  padding: "4px 10px", borderRadius: 20, border: "none",
-                  background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
-                }}>Clear</button>
-              )}
             </div>
-          )}
+          </div>
           {!isOnline && (
             <div style={{
               marginTop: 8, padding: "5px 12px", borderRadius: 8, textAlign: "center",
@@ -866,7 +891,7 @@ export default function SpaghettiWall() {
           )}
         </div>
 
-        {filtered.length === 0 && (
+        {displayed.length === 0 && (
           <div style={{ padding: 60, textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>💭</div>
             <div style={{ fontSize: 20, fontWeight: 600, color: t.text, marginBottom: 4 }}>No ideas yet</div>
@@ -875,7 +900,7 @@ export default function SpaghettiWall() {
         )}
 
         {/* Active ideas */}
-        {filtered.map((idea, filteredIdx) => {
+        {displayed.map((idea, filteredIdx) => {
           const isReordering = reorderingId === idea.id;
           // Neighbour shift lives on the stable key'd wrapper — IdeaRow (now memo'd + external)
           // only re-renders when its own props change, not on every drag-move event.
