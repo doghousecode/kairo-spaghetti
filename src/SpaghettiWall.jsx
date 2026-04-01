@@ -160,7 +160,7 @@ const IdeaRow = memo(function IdeaRow({
       onPointerUp={() => {
         clearTimeout(longPressTimer.current);
         if (!hasMoved.current && !reorderingRef.current) {
-          setSelected(idea); setNoteInput(""); setEditingTitle(false);
+          setSelected(idea); setNoteInput(""); setEditingTitle(false); setEditingText(false); setEditingNoteIdx(null);
         }
       }}
       onPointerCancel={() => { clearTimeout(longPressTimer.current); hasMoved.current = true; }}
@@ -294,6 +294,10 @@ export default function SpaghettiWall() {
   const [noteInput, setNoteInput] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  const [editingText, setEditingText] = useState(false);
+  const [textDraft, setTextDraft] = useState("");
+  const [editingNoteIdx, setEditingNoteIdx] = useState(null);
+  const [noteEditDraft, setNoteEditDraft] = useState("");
   const [captureImage, setCaptureImage] = useState(null);
   const [listening, setListening] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -638,6 +642,20 @@ export default function SpaghettiWall() {
     if (!titleDraft.trim() || !selected) return;
     updateIdea(selected.id, { title: titleDraft.trim() });
     setEditingTitle(false);
+  };
+
+  const saveText = () => {
+    if (!textDraft.trim() || !selected) return;
+    updateIdea(selected.id, { text: textDraft.trim() });
+    setEditingText(false);
+  };
+
+  const updateNote = (id, idx, newText) => {
+    const idea = ideas.find(i => i.id === id); if (!idea) return;
+    const notes = idea.notes.map((n, i) => i === idx ? { ...n, text: newText.trim() } : n);
+    updateIdea(id, { notes });
+    setEditingNoteIdx(null);
+    setNoteEditDraft("");
   };
 
   const addTag = (id, tag) => {
@@ -1119,10 +1137,31 @@ export default function SpaghettiWall() {
 
               {/* Original text */}
               {selected.text && (
-                <div style={{
-                  padding: 14, borderRadius: 12, background: t.inputBg,
-                  fontSize: 15, color: t.textSecondary, lineHeight: 1.6, marginBottom: 16,
-                }}>{selected.text}</div>
+                editingText ? (
+                  <div style={{ marginBottom: 16 }}>
+                    <textarea value={textDraft} onChange={e => setTextDraft(e.target.value)}
+                      autoFocus
+                      onKeyDown={e => { if (e.key === "Escape") setEditingText(false); }}
+                      style={{
+                        width: "100%", padding: 12, borderRadius: 12, border: `1.5px solid ${t.accent}`,
+                        background: t.inputBg, color: t.text, fontSize: 15, lineHeight: 1.6,
+                        outline: "none", fontFamily: "inherit", resize: "vertical", minHeight: 80,
+                        boxSizing: "border-box",
+                      }} />
+                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                      <button onClick={saveText} style={{ padding: "6px 16px", borderRadius: 8, border: "none", background: t.accent, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Save</button>
+                      <button onClick={() => setEditingText(false)} style={{ padding: "6px 16px", borderRadius: 8, border: "none", background: t.inputBg, color: t.textSecondary, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div onClick={() => { setEditingText(true); setTextDraft(selected.text); }}
+                    title="Click to edit"
+                    style={{
+                      padding: 14, borderRadius: 12, background: t.inputBg,
+                      fontSize: 15, color: t.textSecondary, lineHeight: 1.6, marginBottom: 16,
+                      cursor: "text",
+                    }}>{selected.text}</div>
+                )
               )}
 
               {/* Priority */}
@@ -1188,7 +1227,7 @@ export default function SpaghettiWall() {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                     {selected.connections.map(idx => {
                       const c = ideas[idx]; if (!c) return null;
-                      return <button key={idx} onClick={() => { setSelected(c); setNoteInput(""); setEditingTitle(false); }}
+                      return <button key={idx} onClick={() => { setSelected(c); setNoteInput(""); setEditingTitle(false); setEditingText(false); setEditingNoteIdx(null); }}
                         style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: t.inputBg, color: t.accent, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>{c.title}</button>;
                     })}
                   </div>
@@ -1241,13 +1280,40 @@ export default function SpaghettiWall() {
                     background: t.inputBg,
                   }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, color: t.text, lineHeight: 1.5 }}>{n.text}</div>
+                      {editingNoteIdx === i ? (
+                        <div>
+                          <input value={noteEditDraft} onChange={e => setNoteEditDraft(e.target.value)}
+                            autoFocus
+                            onKeyDown={e => {
+                              if (e.key === "Enter" && noteEditDraft.trim()) updateNote(selected.id, i, noteEditDraft);
+                              if (e.key === "Escape") { setEditingNoteIdx(null); setNoteEditDraft(""); }
+                            }}
+                            style={{
+                              width: "100%", padding: "4px 8px", borderRadius: 6,
+                              border: `1.5px solid ${t.accent}`, background: t.inputBg,
+                              color: t.text, fontSize: 14, outline: "none", fontFamily: "inherit",
+                              boxSizing: "border-box",
+                            }} />
+                          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                            <button onClick={() => { if (noteEditDraft.trim()) updateNote(selected.id, i, noteEditDraft); }}
+                              style={{ padding: "3px 10px", borderRadius: 6, border: "none", background: t.accent, color: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Save</button>
+                            <button onClick={() => { setEditingNoteIdx(null); setNoteEditDraft(""); }}
+                              style={{ padding: "3px 10px", borderRadius: 6, border: "none", background: "transparent", color: t.textSecondary, fontSize: 12, cursor: "pointer" }}>Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div onClick={() => { setEditingNoteIdx(i); setNoteEditDraft(n.text); }}
+                          title="Click to edit"
+                          style={{ fontSize: 14, color: t.text, lineHeight: 1.5, cursor: "text" }}>{n.text}</div>
+                      )}
                       <div style={{ fontSize: 11, color: t.textTertiary, marginTop: 2 }}>{timeAgo(n.at)}</div>
                     </div>
-                    <button onClick={() => deleteNote(selected.id, i)} style={{
-                      background: "transparent", border: "none", color: t.textTertiary, fontSize: 14,
-                      cursor: "pointer", padding: "0 0 0 8px", flexShrink: 0,
-                    }}>✕</button>
+                    {editingNoteIdx !== i && (
+                      <button onClick={() => deleteNote(selected.id, i)} style={{
+                        background: "transparent", border: "none", color: t.textTertiary, fontSize: 14,
+                        cursor: "pointer", padding: "0 0 0 8px", flexShrink: 0,
+                      }}>✕</button>
+                    )}
                   </div>
                 ))}
                 <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
