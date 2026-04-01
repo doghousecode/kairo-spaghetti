@@ -834,57 +834,82 @@ export default function SpaghettiWall() {
         padding: `${headerHeight + 16}px 8px 40px`,
       }}>
 
-        {/* Search + Tags — scrolls with content */}
-        <div style={{ marginBottom: 12, padding: "0 4px" }}>
-          <div style={{ marginBottom: 8 }}>
-            <input
-              type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
-              placeholder="Search ideas…"
-              style={{
-                width: "100%", padding: "11px 14px", borderRadius: 12,
-                border: isDark || isSpaghetti ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(0,0,0,0.12)",
-                background: isSpaghetti ? "rgba(0,0,0,0.55)" : t.inputBg,
-                color: t.text, fontSize: 15, outline: "none",
-              }}
-            />
-          </div>
-          {/* Tags + sort toggle — always render this row */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 2, alignItems: "center" }}>
-            {allTags.slice(0, 20).map(tg => (
-              <button key={tg} onClick={() => setFilterTags(p => p.includes(tg) ? p.filter(x => x !== tg) : [...p, tg])} style={{
-                padding: "4px 12px", borderRadius: 20,
-                border: filterTags.includes(tg)
-                  ? "1.5px solid transparent"
-                  : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
-                background: filterTags.includes(tg) ? "#5b80e8" : isSpaghetti ? "rgba(0,0,0,0.45)" : "transparent",
-                color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
-                fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
-                whiteSpace: "nowrap",
-              }}>{tg}</button>
-            ))}
-            {filterTags.length > 0 && (
-              <button onClick={() => setFilterTags([])} style={{
-                padding: "4px 10px", borderRadius: 20, border: "none",
-                background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
-              }}>Clear</button>
-            )}
-            {/* Sort toggle — always visible, pushed to the right */}
-            <div style={{ marginLeft: "auto", display: "flex", gap: 1, background: t.inputBg, borderRadius: 8, padding: 2, flexShrink: 0 }}>
-              {[{ key: "modified", label: "Date" }, { key: "priority", label: "Priority" }, { key: "none", label: "Custom" }].map(opt => (
-                <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
-                  padding: "3px 9px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 500,
-                  background: sortBy === opt.key ? (isDark || isSpaghetti ? "rgba(255,255,255,0.12)" : t.bgElevated) : "transparent",
-                  color: sortBy === opt.key ? (isSpaghetti || isDark ? "#5b80e8" : t.text) : t.textTertiary,
-                  cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap",
-                }}>{opt.label}</button>
+        {/* Search + Tags + Sort — scrolls with content */}
+        <div style={{ marginBottom: 12 }}>
+
+          {/* In spaghetti mode: frosted glass panel wraps all controls */}
+          <div style={{
+            background: isSpaghetti ? "rgba(0,0,0,0.52)" : "transparent",
+            backdropFilter: isSpaghetti ? "blur(24px) saturate(100%)" : undefined,
+            WebkitBackdropFilter: isSpaghetti ? "blur(24px) saturate(100%)" : undefined,
+            borderRadius: isSpaghetti ? 16 : 0,
+            border: isSpaghetti ? "1px solid rgba(255,255,255,0.12)" : "none",
+            padding: isSpaghetti ? "10px 12px 10px" : "0 4px",
+            marginBottom: 0,
+          }}>
+            {/* Search bar */}
+            <div style={{ marginBottom: 8 }}>
+              <input
+                type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                placeholder="Search ideas…"
+                style={{
+                  width: "100%", padding: "11px 14px", borderRadius: 12,
+                  border: isSpaghetti
+                    ? "1px solid rgba(255,255,255,0.14)"
+                    : isDark ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(0,0,0,0.12)",
+                  background: isSpaghetti ? "rgba(255,255,255,0.08)" : t.inputBg,
+                  color: t.text, fontSize: 15, outline: "none",
+                }}
+              />
+            </div>
+
+            {/* Tags + sort toggle row */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+              {allTags.slice(0, 20).map(tg => (
+                <button key={tg} onClick={() => setFilterTags(p => p.includes(tg) ? p.filter(x => x !== tg) : [...p, tg])} style={{
+                  padding: "4px 12px", borderRadius: 20,
+                  border: filterTags.includes(tg)
+                    ? "1.5px solid transparent"
+                    : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
+                  background: filterTags.includes(tg) ? "#5b80e8" : isSpaghetti ? "rgba(255,255,255,0.08)" : "transparent",
+                  color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
+                  fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
+                  whiteSpace: "nowrap",
+                }}>{tg}</button>
               ))}
+              {filterTags.length > 0 && (
+                <button onClick={() => setFilterTags([])} style={{
+                  padding: "4px 10px", borderRadius: 20, border: "none",
+                  background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
+                }}>Clear</button>
+              )}
+              {/* Sort toggle */}
+              <div style={{
+                marginLeft: "auto", display: "flex", gap: 1, borderRadius: 8, padding: 2, flexShrink: 0,
+                background: isSpaghetti ? "rgba(255,255,255,0.1)" : t.inputBg,
+              }}>
+                {[{ key: "modified", label: "Date" }, { key: "priority", label: "Priority" }, { key: "none", label: "Custom" }].map(opt => (
+                  <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
+                    padding: "3px 9px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 500,
+                    background: sortBy === opt.key
+                      ? (isSpaghetti ? "rgba(255,255,255,0.16)" : isDark ? "rgba(255,255,255,0.12)" : t.bgElevated)
+                      : "transparent",
+                    color: sortBy === opt.key ? (isSpaghetti || isDark ? "#5b80e8" : t.text) : t.textTertiary,
+                    cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap",
+                  }}>{opt.label}</button>
+                ))}
+              </div>
             </div>
           </div>
+
+          {/* Offline banner — solid so it reads over wallpaper */}
           {!isOnline && (
             <div style={{
-              marginTop: 8, padding: "5px 12px", borderRadius: 8, textAlign: "center",
-              background: "rgba(255,149,0,0.18)", border: "1px solid rgba(255,149,0,0.35)",
-              fontSize: 12, fontWeight: 500, color: isDark ? "#FFCC00" : "#8A5A00",
+              marginTop: 8, padding: "7px 14px", borderRadius: 10, textAlign: "center",
+              background: isSpaghetti ? "rgba(160,90,0,0.88)" : "rgba(255,149,0,0.18)",
+              border: `1px solid ${isSpaghetti ? "rgba(255,190,60,0.5)" : "rgba(255,149,0,0.35)"}`,
+              fontSize: 12, fontWeight: 500,
+              color: isSpaghetti ? "#FFE0A0" : isDark ? "#FFCC00" : "#8A5A00",
             }}>
               Offline — changes saved locally, will sync when reconnected
             </div>
