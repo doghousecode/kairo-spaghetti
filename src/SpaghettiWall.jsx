@@ -840,7 +840,7 @@ export default function SpaghettiWall() {
                 transition: "all 0.2s ease",
               }}
             >
-              <span style={{ fontSize: 14 }}>✦</span> Liquid Glass {glassMode ? "On" : "Off"}
+              <span style={{ fontSize: 14 }}>🫧</span> Liquid Glass {glassMode ? "On" : "Off"}
             </button>
           </div>
         </div>
@@ -908,7 +908,7 @@ export default function SpaghettiWall() {
                 marginLeft: "auto", display: "flex", gap: 2, borderRadius: 8, padding: 2, flexShrink: 0,
                 background: isSpaghetti ? "rgba(255,255,255,0.1)" : t.inputBg,
               }}>
-                {[{ key: "modified", label: "🕐" }, { key: "priority", label: "‼️" }, { key: "none", label: "↕️" }].map(opt => (
+                {[{ key: "modified", label: "🕐" }, { key: "priority", label: "‼️" }, { key: "none", label: "🎚️" }].map(opt => (
                   <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
                     width: 32, height: 28, borderRadius: 6, border: "none", fontSize: 14,
                     background: sortBy === opt.key
