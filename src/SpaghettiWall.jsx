@@ -247,7 +247,9 @@ const IdeaRow = memo(function IdeaRow({
 export default function SpaghettiWall() {
   const [ideas, setIdeas] = useState([]);
   const [themeMode, setThemeMode] = useState("auto"); // light|dark|auto|spaghetti
-  const [glassMode, setGlassMode] = useState(false);
+  const [glassMode, setGlassMode] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").glassMode ?? false; } catch(e) { return false; }
+  });
   const [input, setInput] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
@@ -767,7 +769,7 @@ export default function SpaghettiWall() {
               color: isSpaghetti || isDark ? "#5b80e8" : t.text, lineHeight: 1.1,
               overflow: "visible", paddingRight: 6,
             }}>spaghetti wall</h1>
-            <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>Throw some ideas, see what sticks</div>
+            <div style={{ fontSize: 15, color: t.textSecondary, marginTop: 2 }}>Throw ideas, see what sticks</div>
           </div>
           {/* Theme toggle + LG button — stacked column, visually grouped */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
@@ -820,8 +822,8 @@ export default function SpaghettiWall() {
               type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
               placeholder="Search ideas…"
               style={{
-                width: "100%", padding: "9px 14px", borderRadius: 12,
-                border: `1px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                width: "100%", padding: "11px 14px", borderRadius: 12,
+                border: isDark || isSpaghetti ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(0,0,0,0.12)",
                 background: isSpaghetti ? "rgba(0,0,0,0.55)" : t.inputBg,
                 color: t.text, fontSize: 15, outline: "none",
               }}
