@@ -822,7 +822,8 @@ export default function SpaghettiWall() {
               style={{
                 width: "100%", padding: "9px 14px", borderRadius: 12,
                 border: `1px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                background: t.inputBg, color: t.text, fontSize: 15, outline: "none",
+                background: isSpaghetti ? "rgba(0,0,0,0.55)" : t.inputBg,
+                color: t.text, fontSize: 15, outline: "none",
               }}
             />
           </div>
@@ -834,7 +835,7 @@ export default function SpaghettiWall() {
                   border: filterTags.includes(tg)
                     ? "1.5px solid transparent"
                     : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
-                  background: filterTags.includes(tg) ? t.accent : "transparent",
+                  background: filterTags.includes(tg) ? "#5b80e8" : isSpaghetti ? "rgba(0,0,0,0.45)" : "transparent",
                   color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
                   fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
                   whiteSpace: "nowrap",
