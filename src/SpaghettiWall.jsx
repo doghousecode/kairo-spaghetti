@@ -36,7 +36,24 @@ async function saveData(d) {
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────
-async function analyseIdea(text, existing) {
+// Resize image to max 1024px before sending to API — keeps payload small
+async function resizeImage(dataUrl, maxPx = 1024) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+async function analyseIdea(text, existing, imageData = null) {
   const allTags = [...new Set(existing.flatMap(i => i.tags || []))];
   const context = existing.slice(-15).map((i, idx) => `[${idx}] "${i.title}" [${(i.tags||[]).join(",")}]`).join("\n");
 
@@ -44,12 +61,12 @@ async function analyseIdea(text, existing) {
     const res = await fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, allTags, context }),
+      body: JSON.stringify({ text, allTags, context, imageData }),
     });
     const d = await res.json();
     return JSON.parse((d.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim());
   } catch(e) {
-    return { title: text.split(/\s+/).slice(0, 5).join(" "), tags: [], insight: "", connections: [], _failed: true };
+    return { title: text ? text.split(/\s+/).slice(0, 5).join(" ") : "Image capture", tags: [], insight: "", connections: [], _failed: true };
   }
 }
 
@@ -455,11 +472,13 @@ export default function SpaghettiWall() {
   // Retry AI analysis for ideas that were captured while offline
   useEffect(() => {
     const retry = async () => {
-      const pending = ideasRef.current.filter(i => i.needsAnalysis && i.text);
+      const pending = ideasRef.current.filter(i => i.needsAnalysis && (i.text || i.attachments?.some(a => a.type === "image")));
       if (!pending.length) return;
       for (const idea of pending) {
         const others = ideasRef.current.filter(i => i.id !== idea.id);
-        const analysis = await analyseIdea(idea.text, others);
+        const imageAttachment = idea.attachments?.find(a => a.type === "image");
+        const imageData = imageAttachment ? await resizeImage(imageAttachment.data) : null;
+        const analysis = await analyseIdea(idea.text, others, imageData);
         if (analysis._failed) break; // still offline — stop trying
         setIdeas(prev => prev.map(i => i.id !== idea.id ? i : {
           ...i,
@@ -530,10 +549,11 @@ export default function SpaghettiWall() {
     const text = input.trim();
     if (!text && !captureImage) return;
     setAnalysing(true);
-    const analysis = text ? await analyseIdea(text, ideas) : { title: "Image capture", tags: ["visual"], insight: "", connections: [] };
+    const imageForAnalysis = captureImage ? await resizeImage(captureImage) : null;
+    const analysis = await analyseIdea(text, ideas, imageForAnalysis);
     const idea = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      text, title: analysis.title || text.split(/\s+/).slice(0, 5).join(" "),
+      text, title: analysis.title || (text ? text.split(/\s+/).slice(0, 5).join(" ") : "Image capture"),
       tags: analysis.tags || [], insight: analysis.insight || "",
       connections: (analysis.connections || []).map(Number).filter(n => !isNaN(n)),
       notes: [],
