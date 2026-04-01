@@ -54,10 +54,14 @@ async function analyseIdea(text, existing) {
 }
 
 // ─── Tag colours ─────────────────────────────────────────────────────
-const TAG_PALETTE = ["#007AFF","#34C759","#FF9500","#AF52DE","#FF3B30","#5AC8FA","#FF2D55","#FFCC00","#30B0C7","#A2845E"];
-function tagColor(tag) {
+// Two palettes: vivid for dark/spag, darker-same-hue for light (contrast on white)
+// Colours are interleaved warm↔cool so adjacent indices never clash
+const TAG_PALETTE_DARK  = ["#4D9FFF","#FF9F0A","#BF5AF2","#34D058","#FF375F","#5CE5E0","#FF7EB3","#FFD60A","#2DB894","#64D2FF","#DB84FF","#C7A76C"];
+const TAG_PALETTE_LIGHT = ["#1A52CC","#C05A00","#7B24B5","#1A7B2E","#C0003C","#0A7A8A","#B0004A","#8A7000","#1A7A5A","#0070A8","#8A3AB5","#7A5A20"];
+function tagColor(tag, dark = true) {
   let h = 0; for (let i = 0; i < tag.length; i++) h = tag.charCodeAt(i) + ((h << 5) - h);
-  return TAG_PALETTE[Math.abs(h) % TAG_PALETTE.length];
+  const p = dark ? TAG_PALETTE_DARK : TAG_PALETTE_LIGHT;
+  return p[Math.abs(h) % p.length];
 }
 
 // ─── Spaghetti wallpaper ──────────────────────────────────────────────
@@ -105,7 +109,7 @@ const IdeaRow = memo(function IdeaRow({
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
   const isLiquid = glassMode && isSpaghetti;
-  const cardBg = isSpaghetti ? "rgba(0,0,0,0.58)" : isDark ? "rgba(50,50,54,0.82)" : "rgba(205,205,212,0.82)";
+  const cardBg = isSpaghetti ? "rgba(0,0,0,0.58)" : glassMode ? (isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)") : isDark ? "rgba(50,50,54,0.82)" : "rgba(205,205,212,0.82)";
   const cardBorder = isLiquid
     ? "1.5px solid rgba(255,255,255,0.16)"
     : isSpaghetti || isDark ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(255,255,255,0.85)";
@@ -219,7 +223,7 @@ const IdeaRow = memo(function IdeaRow({
             {idea.tags.slice(0, 3).map(tg => (
               <span key={tg} style={{
                 fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 4,
-                background: `${tagColor(tg)}18`, color: tagColor(tg),
+                background: `${tagColor(tg, isDark || isSpaghetti)}18`, color: tagColor(tg, isDark || isSpaghetti),
               }}>{tg}</span>
             ))}
             {idea.tags.length > 3 && <span style={{ fontSize: 11, color: t.textTertiary }}>+{idea.tags.length - 3}</span>}
@@ -769,7 +773,7 @@ export default function SpaghettiWall() {
               color: isSpaghetti || isDark ? "#5b80e8" : t.text, lineHeight: 1.1,
               overflow: "visible", paddingRight: 6,
             }}>spaghetti wall</h1>
-            <div style={{ fontSize: 15, color: t.textSecondary, marginTop: 2 }}>Throw ideas, see what sticks…</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: t.textSecondary, marginTop: 2 }}>Throw ideas, see what sticks…</div>
           </div>
           {/* Theme toggle + LG button — stacked column, visually grouped */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
@@ -1090,7 +1094,7 @@ export default function SpaghettiWall() {
                     <span key={tg} style={{
                       display: "inline-flex", alignItems: "center", gap: 4,
                       fontSize: 13, fontWeight: 500, padding: "3px 10px", borderRadius: 6,
-                      background: `${tagColor(tg)}18`, color: tagColor(tg),
+                      background: `${tagColor(tg, isDark || isSpaghetti)}18`, color: tagColor(tg, isDark || isSpaghetti),
                     }}>
                       {tg}
                       <span onClick={e => { e.stopPropagation(); removeTag(selected.id, tg); }}
