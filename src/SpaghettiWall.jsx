@@ -769,7 +769,7 @@ export default function SpaghettiWall() {
               color: isSpaghetti || isDark ? "#5b80e8" : t.text, lineHeight: 1.1,
               overflow: "visible", paddingRight: 6,
             }}>spaghetti wall</h1>
-            <div style={{ fontSize: 15, color: t.textSecondary, marginTop: 2 }}>Throw ideas, see what sticks</div>
+            <div style={{ fontSize: 15, color: t.textSecondary, marginTop: 2 }}>Throw ideas, see what sticks…</div>
           </div>
           {/* Theme toggle + LG button — stacked column, visually grouped */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
