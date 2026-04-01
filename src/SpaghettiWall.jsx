@@ -865,7 +865,7 @@ export default function SpaghettiWall() {
             borderRadius: isSpaghetti ? 16 : 0,
             border: isSpaghetti ? "1px solid rgba(255,255,255,0.12)" : "none",
             padding: isSpaghetti ? "10px 12px 10px" : "0 4px",
-            marginBottom: 0,
+            filter: glassMode && isSpaghetti ? "brightness(1.5)" : undefined,
           }}>
             {/* Search bar */}
             <div style={{ marginBottom: 8 }}>
@@ -885,37 +885,37 @@ export default function SpaghettiWall() {
 
             {/* Tags + sort toggle row */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-              {allTags.slice(0, 20).map(tg => (
-                <button key={tg} onClick={() => setFilterTags(p => p.includes(tg) ? p.filter(x => x !== tg) : [...p, tg])} style={{
-                  padding: "4px 12px", borderRadius: 20,
-                  border: filterTags.includes(tg)
-                    ? "1.5px solid transparent"
-                    : `1.5px solid ${isDark || isSpaghetti ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)"}`,
-                  background: filterTags.includes(tg) ? "#5b80e8" : isSpaghetti ? "rgba(255,255,255,0.08)" : "transparent",
-                  color: filterTags.includes(tg) ? "#fff" : t.textSecondary,
-                  fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease",
-                  whiteSpace: "nowrap",
-                }}>{tg}</button>
-              ))}
+              {allTags.slice(0, 20).map(tg => {
+                const tc = tagColor(tg, isDark || isSpaghetti);
+                const isActive = filterTags.includes(tg);
+                return (
+                  <button key={tg} onClick={() => setFilterTags(p => isActive ? p.filter(x => x !== tg) : [...p, tg])} style={{
+                    padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 500,
+                    background: `${tc}18`, color: tc,
+                    border: isActive ? `2px solid #5b80e8` : "2px solid transparent",
+                    cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap",
+                  }}>{tg}</button>
+                );
+              })}
               {filterTags.length > 0 && (
                 <button onClick={() => setFilterTags([])} style={{
-                  padding: "4px 10px", borderRadius: 20, border: "none",
-                  background: "transparent", color: t.destructive, fontSize: 12, cursor: "pointer",
+                  padding: "2px 8px", borderRadius: 5, border: "none",
+                  background: "transparent", color: t.destructive, fontSize: 11, cursor: "pointer",
                 }}>Clear</button>
               )}
-              {/* Sort toggle */}
+              {/* Sort toggle — same dimensions as header theme buttons */}
               <div style={{
-                marginLeft: "auto", display: "flex", gap: 1, borderRadius: 8, padding: 2, flexShrink: 0,
+                marginLeft: "auto", display: "flex", gap: 2, borderRadius: 8, padding: 2, flexShrink: 0,
                 background: isSpaghetti ? "rgba(255,255,255,0.1)" : t.inputBg,
               }}>
-                {[{ key: "modified", label: "Date" }, { key: "priority", label: "Priority" }, { key: "none", label: "Custom" }].map(opt => (
+                {[{ key: "modified", label: "🕐" }, { key: "priority", label: "‼️" }, { key: "none", label: "↕️" }].map(opt => (
                   <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
-                    padding: "3px 9px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 500,
+                    width: 32, height: 28, borderRadius: 6, border: "none", fontSize: 14,
                     background: sortBy === opt.key
                       ? (isSpaghetti ? "rgba(255,255,255,0.16)" : isDark ? "rgba(255,255,255,0.12)" : t.bgElevated)
                       : "transparent",
                     color: sortBy === opt.key ? (isSpaghetti || isDark ? "#5b80e8" : t.text) : t.textTertiary,
-                    cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap",
+                    cursor: "pointer", transition: "all 0.15s ease",
                   }}>{opt.label}</button>
                 ))}
               </div>
