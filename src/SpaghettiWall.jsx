@@ -641,7 +641,6 @@ export default function SpaghettiWall() {
   useEffect(() => { reorderingRef.current = reorderingId; }, [reorderingId]);
 
   const onReorderStart = useCallback((id, filteredIdx, clientY) => {
-    if (sortByRef.current !== "none") return; // drag disabled when sorted
     reorderingRef.current = id;                                   // synchronous — container can see it immediately
     const el = rowRefs.current.get(id);
     if (el) rowHeightRef.current = el.getBoundingClientRect().height + 8;
@@ -667,21 +666,22 @@ export default function SpaghettiWall() {
   const onReorderEnd = () => {
     if (!reorderingRef.current) return;
     const draggingId = reorderingRef.current;
-    reorderingRef.current = null;                                 // synchronous clear
+    reorderingRef.current = null;
     const startFIdx = reorderStartIdx.current;
     const endFIdx = reorderTargetIdx ?? startFIdx;
     if (endFIdx !== startFIdx) {
+      // Reorder based on the current displayed order (works regardless of active sort)
+      const displayedIds = displayed.map(i => i.id);
+      const reordered = [...displayedIds];
+      const [moved] = reordered.splice(startFIdx, 1);
+      reordered.splice(endFIdx, 0, moved);
       setIdeas(prev => {
-        const fromIdx = prev.findIndex(i => i.id === draggingId);
-        if (fromIdx === -1) return prev;
-        const offset = endFIdx - startFIdx;
-        const toIdx = Math.max(0, Math.min(prev.length - 1, fromIdx + offset));
-        if (fromIdx === toIdx) return prev;
-        const next = [...prev];
-        const [item] = next.splice(fromIdx, 1);
-        next.splice(toIdx, 0, item);
-        return next;
+        const map = new Map(prev.map(i => [i.id, i]));
+        const displayedSet = new Set(displayedIds);
+        const rest = prev.filter(i => !displayedSet.has(i.id));
+        return [...reordered.map(id => map.get(id)).filter(Boolean), ...rest];
       });
+      setSortBy("none"); // switch to Custom
     }
     setReorderingId(null);
     setReorderY(0);
@@ -870,7 +870,7 @@ export default function SpaghettiWall() {
             )}
             {/* Sort toggle — always visible, pushed to the right */}
             <div style={{ marginLeft: "auto", display: "flex", gap: 1, background: t.inputBg, borderRadius: 8, padding: 2, flexShrink: 0 }}>
-              {[{ key: "modified", label: "Recent" }, { key: "priority", label: "Priority" }].map(opt => (
+              {[{ key: "modified", label: "Date" }, { key: "priority", label: "Priority" }, { key: "none", label: "Custom" }].map(opt => (
                 <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
                   padding: "3px 9px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 500,
                   background: sortBy === opt.key ? (isDark || isSpaghetti ? "rgba(255,255,255,0.12)" : t.bgElevated) : "transparent",
