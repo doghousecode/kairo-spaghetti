@@ -822,7 +822,7 @@ export default function SpaghettiWall() {
             >🍝</button>
           </div>
 
-          <p style={{ fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: "0.79rem", color: "rgba(var(--rgb),0.32)", marginTop: "3px" }}>
+          <p style={{ fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: "1rem", color: "rgba(var(--rgb),0.32)", marginTop: "8px" }}>
             Throw ideas, see what sticks…
           </p>
 

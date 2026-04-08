@@ -15,7 +15,45 @@
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="kairo-splash" style="position:fixed;inset:0;z-index:9999;background:#0d0d0d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;pointer-events:none;">
+      <img src="/kairo-wordmark-cropped.png" alt="Kairo" style="width:68vw;max-width:680px;height:auto;" />
+      <p style="color:rgba(240,240,240,0.35);font-size:clamp(0.65rem,2vw,0.85rem);letter-spacing:0.18em;text-transform:lowercase;font-weight:400;margin:0;font-family:system-ui,sans-serif;">
+        spaghetti wall
+      </p>
+    </div>
+
+    <div id="kairo-root" style="opacity:0">
+      <div id="root"></div>
+    </div>
+
+    <script>
+      (function() {
+        var splash = document.getElementById('kairo-splash');
+        var root   = document.getElementById('kairo-root');
+        var done   = false;
+
+        function show() {
+          if (done) return;
+          done = true;
+          if (root)   { root.style.transition = 'opacity 0.5s ease'; root.style.opacity = '1'; }
+          if (splash) { splash.style.transition = 'opacity 0.8s ease'; splash.style.opacity = '0'; splash.style.pointerEvents = 'none'; }
+        }
+
+        window.kairoReady = show;
+        setTimeout(show, 4000);
+
+        window.kairoShowSplash = function() {
+          if (!splash) return;
+          splash.style.transition    = 'opacity 0.4s ease';
+          splash.style.opacity       = '1';
+          splash.style.pointerEvents = 'auto';
+          splash.style.cursor        = 'pointer';
+          done = false;
+          splash.addEventListener('click', show, { once: true });
+        };
+      })();
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
