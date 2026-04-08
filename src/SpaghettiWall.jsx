@@ -113,7 +113,7 @@ function timeAgo(d) {
 const IdeaRow = memo(function IdeaRow({
   idea, filteredIdx, isReordering, reorderY,
   reorderingRef, onReorderStart,
-  t, isDark, isSpaghetti, glassMode,
+  t, isDark, isSpaghetti,
   setSelected, setNoteInput, setEditingTitle, cyclePriority,
 }) {
   const hasMoved = useRef(false);
@@ -125,12 +125,8 @@ const IdeaRow = memo(function IdeaRow({
 
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
-  const isLiquid = glassMode && isSpaghetti;
-  const cardBg = isSpaghetti ? "rgba(0,0,0,0.58)" : glassMode ? (isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)") : isDark ? "rgba(50,50,54,0.82)" : "rgba(205,205,212,0.82)";
-  const cardBorder = isLiquid
-    ? "1.5px solid rgba(255,255,255,0.16)"
-    : isSpaghetti || isDark ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(255,255,255,0.85)";
-  const cardBlur = isLiquid ? "blur(28px) saturate(180%) brightness(1.04)" : "blur(24px) saturate(100%)";
+  const cardBg = isSpaghetti ? "rgba(0,0,0,0.45)" : isDark ? "rgba(255,255,255,0.04)" : "rgba(15,15,30,0.04)";
+  const cardBorder = isSpaghetti ? "1px solid rgba(255,255,255,0.12)" : isDark ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(15,15,30,0.09)";
 
   return (
     <div
@@ -167,50 +163,18 @@ const IdeaRow = memo(function IdeaRow({
       style={{
         display: "flex", alignItems: "center", gap: 12,
         padding: "14px 16px",
-        transition: "box-shadow 0.15s ease",
         transform: isReordering ? `translateY(${reorderY}px)` : "none",
         position: "relative",
         marginBottom: 8,
         background: cardBg,
         border: cardBorder,
-        borderRadius: isLiquid ? 12 : isSpaghetti ? 20 : 12,
-        backdropFilter: cardBlur,
-        WebkitBackdropFilter: cardBlur,
-        boxShadow: isLiquid
-          // LG ON: production-style shadow — brightness(1.5) wrapper does the heavy lifting
-          ? isReordering
-            ? `0 16px 40px rgba(0,0,0,0.55), inset 0 1.5px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.1)`
-            : `0 2px 10px rgba(0,0,0,0.3), inset 0 1.5px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.1)`
-          // LG OFF spaghetti: our improved rim shadow — no white stripe, just edges
-          : isSpaghetti
-          ? [
-              `0 ${isReordering ? 20 : 4}px ${isReordering ? 48 : 20}px rgba(0,0,0,${isReordering ? 0.55 : 0.3})`,
-              "0 0 0 0.5px rgba(255,255,255,0.2)",
-              "inset 0 -1.5px 0 rgba(0,0,0,0.18)",
-              "inset 1.5px 0 0 rgba(255,255,255,0.1)",
-              "inset -1.5px 0 0 rgba(255,255,255,0.1)",
-            ].join(", ")
-          : isReordering
-          ? `0 16px 40px rgba(0,0,0,${isSpaghetti || isDark ? 0.55 : 0.2}), inset 0 1.5px 0 rgba(255,255,255,${glassMode ? 0.65 : 0.28}), inset 0 -1px 0 rgba(0,0,0,0.1)`
-          : `0 2px 10px rgba(0,0,0,${isSpaghetti || isDark ? 0.3 : 0.08}), inset 0 1.5px 0 rgba(255,255,255,${glassMode ? 0.55 : 0.28}), inset 0 -1px 0 rgba(0,0,0,0.1)`,
+        borderRadius: 12,
+        boxShadow: isReordering ? "0 16px 40px rgba(0,0,0,0.3)" : "none",
         userSelect: "none", WebkitUserSelect: "none",
         WebkitTapHighlightColor: "transparent",
         cursor: isReordering ? "grabbing" : "pointer",
       }}
     >
-      {/* Shimmer: slow diagonal light sweep — simulates light moving through glass */}
-      {isLiquid && (
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
-          pointerEvents: "none", zIndex: -1,
-        }}>
-          <div className="glass-shimmer" style={{
-            position: "absolute", top: 0, bottom: 0, left: 0, width: "45%",
-            background: "linear-gradient(to right, transparent, rgba(255,255,255,0.07) 50%, transparent)",
-            transform: "skewX(-12deg)",
-          }} />
-        </div>
-      )}
       {/* Priority indicator */}
       <button
         onPointerDown={e => e.stopPropagation()}
@@ -267,10 +231,7 @@ const IdeaRow = memo(function IdeaRow({
 // ─── App ─────────────────────────────────────────────────────────────
 export default function SpaghettiWall() {
   const [ideas, setIdeas] = useState([]);
-  const [themeMode, setThemeMode] = useState("auto"); // light|dark|auto|spaghetti
-  const [glassMode, setGlassMode] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").glassMode ?? false; } catch(e) { return false; }
-  });
+  const [themeMode, setThemeMode] = useState("dark"); // light|dark|spaghetti
   const [sortBy, setSortBy] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").sortBy || "modified"; } catch(e) { return "modified"; }
   });
@@ -301,8 +262,12 @@ export default function SpaghettiWall() {
   const [captureImage, setCaptureImage] = useState(null);
   const [listening, setListening] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [systemDark, setSystemDark] = useState(window.matchMedia("(prefers-color-scheme: dark)").matches);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showCategories, setShowCategories] = useState(true);
+  const lastScrollY = useRef(0);
+  const ignoreScrollUntil = useRef(0);
+  const categoriesRef = useRef(null);
+  const [categoriesHeight, setCategoriesHeight] = useState(50);
 
   const fileRef = useRef(null);
   const detailFileRef = useRef(null);
@@ -318,14 +283,12 @@ export default function SpaghettiWall() {
   const reorderingRef = useRef(null);
   const loadedRef = useRef(false);
   const headerRef = useRef(null);
-  const themeModeRef = useRef("auto");
-  const glassModeRef = useRef(false);
+  const themeModeRef = useRef("dark");
   const [headerHeight, setHeaderHeight] = useState(160);
 
   useEffect(() => { selRef.current = selected; setSheetDY(0); setDismissing(false); sheetDragActive.current = false; }, [selected]);
   useEffect(() => { ideasRef.current = ideas; }, [ideas]);
   useEffect(() => { themeModeRef.current = themeMode; }, [themeMode]);
-  useEffect(() => { glassModeRef.current = glassMode; }, [glassMode]);
 
   // Non-passive touchmove: prevent page scroll during drag (React's synthetic onTouchMove is passive)
   useEffect(() => {
@@ -336,20 +299,13 @@ export default function SpaghettiWall() {
     return () => el.removeEventListener('touchmove', handler);
   }, []);
 
-  // System theme listener
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e) => setSystemDark(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
 
   // Online/offline tracking — show indicator and sync to server on reconnect
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
       if (loadedRef.current) {
-        saveData({ ideas: ideasRef.current, themeMode: themeModeRef.current, glassMode: glassModeRef.current, sortBy: sortByRef.current });
+        saveData({ ideas: ideasRef.current, themeMode: themeModeRef.current, sortBy: sortByRef.current });
       }
     };
     const handleOffline = () => setIsOnline(false);
@@ -456,11 +412,46 @@ export default function SpaghettiWall() {
     return () => ro.disconnect();
   }, []);
 
+  // Track categories height for smooth slide animation
+  useEffect(() => {
+    const el = categoriesRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setCategoriesHeight(el.scrollHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Scroll: hide categories when scrolling down, show on scroll up (like Decode)
+  useEffect(() => {
+    const onScroll = () => {
+      if (filterTags.length > 0) return;
+      if (Date.now() < ignoreScrollUntil.current) return;
+      const y = window.scrollY;
+      if (y <= 8) setShowCategories(true);
+      else if (y > lastScrollY.current + 4) setShowCategories(false);
+      else if (y < lastScrollY.current - 4) setShowCategories(true);
+      lastScrollY.current = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [filterTags]);
+
+  // Keep categories visible when a filter is active
+  useEffect(() => {
+    ignoreScrollUntil.current = Date.now() + 1000;
+    lastScrollY.current = window.scrollY;
+    setShowCategories(true);
+  }, [filterTags]);
+
   // Load
   useEffect(() => {
     (async () => {
       const d = await loadData();
-      if (d) { setIdeas(d.ideas || []); setThemeMode(d.themeMode || "auto"); setGlassMode(d.glassMode ?? false); }
+      if (d) {
+        setIdeas(d.ideas || []);
+        const saved = d.themeMode;
+        setThemeMode(saved === "light" || saved === "dark" || saved === "spaghetti" ? saved : "dark");
+      }
       loadedRef.current = true; // guard: don't save until we've loaded
     })();
   }, []);
@@ -469,9 +460,9 @@ export default function SpaghettiWall() {
   // loadedRef guard prevents wiping data before initial load completes
   useEffect(() => {
     if (!loadedRef.current) return;
-    const t = setTimeout(() => saveData({ ideas, themeMode, glassMode, sortBy }), 800);
+    const t = setTimeout(() => saveData({ ideas, themeMode, sortBy }), 800);
     return () => clearTimeout(t);
-  }, [ideas, themeMode, glassMode, sortBy]);
+  }, [ideas, themeMode, sortBy]);
 
   // Retry AI analysis for ideas that were captured while offline
   useEffect(() => {
@@ -511,25 +502,25 @@ export default function SpaghettiWall() {
   }, []);
 
   // ─── Theme resolution ──────────────────────────────────────────────
-  const isDark = themeMode === "dark" || (themeMode === "auto" && systemDark) || themeMode === "spaghetti";
+  const isDark = themeMode === "dark" || themeMode === "spaghetti";
   const isSpaghetti = themeMode === "spaghetti";
 
   // useMemo so the object reference is stable between renders — lets React.memo
   // on IdeaRow do its job (a new object literal every render would bust the memo).
   const t = useMemo(() => ({
-    bg: isSpaghetti ? "#B52A1C" : isDark ? "#000000" : "#F2F2F7",
-    bgSecondary: isDark ? "#1C1C1E" : "#FFFFFF",
-    bgTertiary: isDark ? "#2C2C2E" : "#F2F2F7",
-    bgElevated: isDark ? "#1C1C1E" : "#FFFFFF",
-    text: isDark ? "#FFFFFF" : "#000000",
-    textSecondary: isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)",
-    textTertiary: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.25)",
-    separator: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-    accent: "#007AFF",
+    bg: isDark ? "#080810" : "#eef0ff",
+    bgSecondary: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,15,30,0.04)",
+    bgTertiary: isDark ? "rgba(255,255,255,0.06)" : "rgba(15,15,30,0.06)",
+    bgElevated: isDark ? "#1a1a2e" : "#ffffff",
+    text: isDark ? "rgba(255,255,255,0.88)" : "rgba(15,15,30,0.88)",
+    textSecondary: isDark ? "rgba(255,255,255,0.55)" : "rgba(15,15,30,0.45)",
+    textTertiary: isDark ? "rgba(255,255,255,0.3)" : "rgba(15,15,30,0.25)",
+    separator: isDark ? "rgba(255,255,255,0.07)" : "rgba(15,15,30,0.07)",
+    accent: "#5b80e8",
     destructive: "#FF3B30",
-    cardShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.08)",
-    cardShadowHover: isDark ? "0 4px 12px rgba(0,0,0,0.4)" : "0 4px 12px rgba(0,0,0,0.12)",
-    inputBg: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+    cardShadow: "none",
+    cardShadowHover: "none",
+    inputBg: isDark ? "rgba(255,255,255,0.06)" : "rgba(15,15,30,0.04)",
     backdrop: isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.3)",
   }), [isDark, isSpaghetti]);
 
@@ -767,16 +758,22 @@ export default function SpaghettiWall() {
       onTouchEnd={onReorderEnd}
       onTouchCancel={onReorderEnd}
       style={{
-        fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif",
+        fontFamily: "'DM Sans',system-ui,sans-serif",
         color: t.text, minHeight: "100vh", position: "relative",
         WebkitFontSmoothing: "antialiased",
         touchAction: reorderingId ? "none" : undefined,
+        "--rgb": isDark ? "255,255,255" : "15,15,30",
+        "--surface": isDark ? "#0d0d1c" : "#f5f6ff",
       }}>
 
       {/* ─── Static wallpaper — truly fixed, never moves ─── */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
-        background: t.bg,
+        background: isSpaghetti
+          ? undefined
+          : isDark
+          ? "linear-gradient(135deg,#080810 0%,#0d0d1c 60%,#080812 100%)"
+          : "linear-gradient(135deg,#eef0ff 0%,#f5f6ff 60%,#eef0ff 100%)",
         backgroundImage: isSpaghetti ? spaghettiWallpaper : undefined,
         backgroundSize: isSpaghetti ? "cover" : undefined,
         backgroundPosition: isSpaghetti ? "center" : undefined,
@@ -786,21 +783,16 @@ export default function SpaghettiWall() {
       <div style={{ position: "relative", zIndex: 1 }}>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@1,800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Jost:ital,wght@1,700;1,800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 0; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); } }
+        @keyframes ai-border-spin { to { transform: rotate(1turn); } }
+        @keyframes ai-glow-pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
         @media (max-width: 768px) { .spaghetti-wallpaper { background-size: 300% !important; background-position: center 40% !important; } }
-@keyframes glass-shimmer {
-          0% { transform: translateX(-200%) skewX(-12deg); opacity: 0; }
-          15% { opacity: 1; }
-          85% { opacity: 1; }
-          100% { transform: translateX(400%) skewX(-12deg); opacity: 0; }
-        }
-        .glass-shimmer { animation: glass-shimmer 7s ease-in-out infinite; }
         .btn-secondary { transition: all 0.15s ease; }
         .btn-secondary:hover { opacity: 0.8; }
         .btn-secondary:active { transform: scale(0.97); }
@@ -811,56 +803,95 @@ export default function SpaghettiWall() {
 
       {/* ─── Header — fixed, never scrolls ─── */}
       <header ref={headerRef} style={{
-        padding: "16px 20px 10px",
-        background: isDark || isSpaghetti ? "#0d0d0d" : "rgba(225,225,232,0.97)",
-        backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-        borderBottom: `0.5px solid ${t.separator}`,
+        background: "var(--surface)", borderBottom: "1px solid rgba(var(--rgb),0.07)",
+        padding: "0 20px",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div style={{ overflow: "visible" }}>
-            <h1 style={{
-              fontSize: 34, fontWeight: 800, fontStyle: "italic",
-              fontFamily: "'Jost', -apple-system, sans-serif",
-              textTransform: "lowercase", letterSpacing: "-0.5px",
-              color: isSpaghetti || isDark ? "#5b80e8" : t.text, lineHeight: 1.1,
-              overflow: "visible", paddingRight: 6,
-            }}>spaghetti wall</h1>
-            <div style={{ fontSize: 15, fontWeight: 500, color: t.textSecondary, marginTop: 2 }}>Throw ideas, see what sticks…</div>
-          </div>
-          {/* Theme toggle + LG button — stacked column, visually grouped */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
-            <div style={{ display: "flex", gap: 2, background: t.inputBg, borderRadius: 8, padding: 2 }}>
-              {[
-                { key: "light", label: "☀️" },
-                { key: "dark", label: "🌙" },
-                { key: "auto", label: "A" },
-                { key: "spaghetti", label: "🍝" },
-              ].map(opt => (
-                <button key={opt.key} onClick={() => setThemeMode(opt.key)} style={{
-                  width: 32, height: 28, borderRadius: 6, border: "none",
-                  background: themeMode === opt.key ? t.bgElevated : "transparent",
-                  color: themeMode === opt.key ? t.text : t.textSecondary,
-                  fontSize: opt.key === "auto" ? 12 : 14, fontWeight: 600, cursor: "pointer",
-                  boxShadow: themeMode === opt.key ? t.cardShadow : "none",
-                  transition: "all 0.2s ease",
-                }}>{opt.label}</button>
-              ))}
-            </div>
+        <div style={{ maxWidth: 680, margin: "0 auto", paddingTop: "1.1rem", paddingBottom: "1rem" }}>
+
+          {/* Logo row */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", position: "relative" }}>
+            <a href="https://meetkairo.ai" style={{ display: "block", lineHeight: 0 }}>
+              <img src="/kairo-wordmark-cropped.png" alt="Kairo" style={{ height: "28px", width: "auto", display: "block", transform: "translateY(-1px)" }} />
+            </a>
+            <span style={{ fontFamily: "'Jost',system-ui,sans-serif", fontWeight: 700, fontStyle: "italic", fontSize: "2.2rem", textTransform: "lowercase", color: "#5b80e8", lineHeight: 1 }}>spaghetti</span>
             <button
-              onClick={() => setGlassMode(g => !g)}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                height: 32, borderRadius: 8, border: "none",
-                background: glassMode ? "rgba(42,58,106,0.5)" : t.inputBg,
-                color: glassMode ? "#5b80e8" : t.textSecondary,
-                fontSize: 12, fontWeight: 600, cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <span style={{ fontSize: 14 }}>🫧</span> Liquid Glass {glassMode ? "On" : "Off"}
-            </button>
+              onClick={() => setThemeMode(m => m === "light" ? "dark" : m === "dark" ? "spaghetti" : "light")}
+              title="Cycle theme: light → dark → spaghetti"
+              style={{ marginLeft: "auto", position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "1.15rem", lineHeight: 1, padding: "4px 2px" }}
+            >🍝</button>
           </div>
+
+          <p style={{ fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: "0.79rem", color: "rgba(var(--rgb),0.32)", marginTop: "3px" }}>
+            Throw ideas, see what sticks…
+          </p>
+
+          {/* Search bar with animated rainbow border */}
+          <div style={{ position: "relative", marginTop: "1.1rem", marginBottom: "0.5rem" }}>
+            <div style={{ position: "absolute", inset: 0, borderRadius: "13px", overflow: "hidden", zIndex: 0 }}>
+              <div style={{
+                position: "absolute", width: "200%", height: "200%", top: "-50%", left: "-50%",
+                background: "conic-gradient(from 0deg, #3b82f6, #8b5cf6, #ec4899, #f97316, #f59e0b, #8b5cf6, #3b82f6)",
+                animation: "ai-border-spin 6s linear infinite, ai-glow-pulse 3s ease-in-out infinite",
+              }} />
+            </div>
+            <div style={{ position: "absolute", inset: "1.5px", borderRadius: "11.5px", background: "var(--surface)", zIndex: 1 }} />
+            <div style={{ position: "absolute", inset: 0, borderRadius: "13px", boxShadow: "0 0 22px rgba(139,92,246,0.18), 0 0 8px rgba(236,72,153,0.12)", zIndex: 0, pointerEvents: "none" }} />
+            <input
+              type="text"
+              placeholder="Search ideas…"
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              style={{
+                position: "relative", zIndex: 2, width: "100%",
+                background: "transparent", border: "none", outline: "none",
+                fontFamily: "inherit", fontSize: "16px", padding: "14px 16px",
+                color: t.text,
+              }}
+            />
+          </div>
+
+          {/* Sliding tag filters + sort — hides on scroll down */}
+          <div style={{
+            overflow: "hidden",
+            maxHeight: showCategories ? `${categoriesHeight + 16}px` : "0px",
+            opacity: showCategories ? 1 : 0,
+            transition: "max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease",
+          }}>
+            <div ref={categoriesRef} style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", paddingTop: "10px", paddingBottom: "6px" }}>
+              {allTags.slice(0, 20).map(tg => {
+                const tc = tagColor(tg, isDark || isSpaghetti);
+                const isActive = filterTags.includes(tg);
+                return (
+                  <button key={tg} onClick={() => setFilterTags(p => isActive ? p.filter(x => x !== tg) : [...p, tg])} style={{
+                    fontSize: "0.75rem", padding: "6px 12px", borderRadius: "9999px",
+                    border: isActive ? "1px solid rgba(99,102,241,0.55)" : "1px solid rgba(var(--rgb),0.09)",
+                    background: isActive ? "rgba(99,102,241,0.18)" : "transparent",
+                    color: isActive ? "rgba(199,210,254,1)" : "rgba(var(--rgb),0.38)",
+                    cursor: "pointer", whiteSpace: "nowrap",
+                  }}>{tg}</button>
+                );
+              })}
+              {filterTags.length > 0 && (
+                <button onClick={() => setFilterTags([])} style={{
+                  fontSize: "0.75rem", padding: "6px 10px", borderRadius: "9999px", border: "none",
+                  background: "transparent", color: t.destructive, cursor: "pointer",
+                }}>Clear</button>
+              )}
+              {/* Sort toggle */}
+              <div style={{ marginLeft: "auto", display: "flex", gap: 2, borderRadius: 8, padding: 2, flexShrink: 0, background: "rgba(var(--rgb),0.06)" }}>
+                {[{ key: "modified", label: "🕐" }, { key: "priority", label: "‼️" }, { key: "none", label: "🎚️" }].map(opt => (
+                  <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
+                    width: 30, height: 26, borderRadius: 6, border: "none", fontSize: 12,
+                    background: sortBy === opt.key ? "rgba(var(--rgb),0.12)" : "transparent",
+                    color: sortBy === opt.key ? "#5b80e8" : "rgba(var(--rgb),0.3)",
+                    cursor: "pointer", transition: "all 0.15s ease",
+                  }}>{opt.label}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
       </header>
 
@@ -872,87 +903,16 @@ export default function SpaghettiWall() {
         padding: `${headerHeight + 16}px 8px 40px`,
       }}>
 
-        {/* Search + Tags + Sort — scrolls with content */}
-        <div style={{ marginBottom: 12 }}>
-
-          {/* In spaghetti mode: frosted glass panel wraps all controls */}
+        {/* Offline banner */}
+        {!isOnline && (
           <div style={{
-            background: isSpaghetti ? "rgba(0,0,0,0.52)" : "transparent",
-            backdropFilter: isSpaghetti ? "blur(24px) saturate(100%)" : undefined,
-            WebkitBackdropFilter: isSpaghetti ? "blur(24px) saturate(100%)" : undefined,
-            borderRadius: isSpaghetti ? 16 : 0,
-            border: isSpaghetti ? "1px solid rgba(255,255,255,0.12)" : "none",
-            padding: isSpaghetti ? "10px 12px 10px" : "0 4px",
-            filter: glassMode && isSpaghetti ? "brightness(1.5)" : undefined,
+            marginBottom: 12, padding: "7px 14px", borderRadius: 10, textAlign: "center",
+            background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.22)",
+            fontSize: 12, fontWeight: 500, color: "rgba(252,211,77,0.8)",
           }}>
-            {/* Search bar */}
-            <div style={{ marginBottom: 8 }}>
-              <input
-                type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                placeholder="Search ideas…"
-                style={{
-                  width: "100%", padding: "11px 14px", borderRadius: 12,
-                  border: isSpaghetti
-                    ? "1px solid rgba(255,255,255,0.14)"
-                    : isDark ? "1px solid rgba(255,255,255,0.38)" : "1.5px solid rgba(0,0,0,0.12)",
-                  background: isSpaghetti ? "rgba(255,255,255,0.08)" : t.inputBg,
-                  color: t.text, fontSize: 15, outline: "none",
-                }}
-              />
-            </div>
-
-            {/* Tags + sort toggle row */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-              {allTags.slice(0, 20).map(tg => {
-                const tc = tagColor(tg, isDark || isSpaghetti);
-                const isActive = filterTags.includes(tg);
-                return (
-                  <button key={tg} onClick={() => setFilterTags(p => isActive ? p.filter(x => x !== tg) : [...p, tg])} style={{
-                    padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 500,
-                    background: `${tc}18`, color: tc,
-                    border: isActive ? `2px solid #5b80e8` : "2px solid transparent",
-                    cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap",
-                  }}>{tg}</button>
-                );
-              })}
-              {filterTags.length > 0 && (
-                <button onClick={() => setFilterTags([])} style={{
-                  padding: "2px 8px", borderRadius: 5, border: "none",
-                  background: "transparent", color: t.destructive, fontSize: 11, cursor: "pointer",
-                }}>Clear</button>
-              )}
-              {/* Sort toggle — same dimensions as header theme buttons */}
-              <div style={{
-                marginLeft: "auto", display: "flex", gap: 2, borderRadius: 8, padding: 2, flexShrink: 0,
-                background: isSpaghetti ? "rgba(255,255,255,0.1)" : t.inputBg,
-              }}>
-                {[{ key: "modified", label: "🕐" }, { key: "priority", label: "‼️" }, { key: "none", label: "🎚️" }].map(opt => (
-                  <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
-                    width: 32, height: 28, borderRadius: 6, border: "none", fontSize: 14,
-                    background: sortBy === opt.key
-                      ? (isSpaghetti ? "rgba(255,255,255,0.16)" : isDark ? "rgba(255,255,255,0.12)" : t.bgElevated)
-                      : "transparent",
-                    color: sortBy === opt.key ? (isSpaghetti || isDark ? "#5b80e8" : t.text) : t.textTertiary,
-                    cursor: "pointer", transition: "all 0.15s ease",
-                  }}>{opt.label}</button>
-                ))}
-              </div>
-            </div>
+            Offline — changes saved locally, will sync when reconnected
           </div>
-
-          {/* Offline banner — solid so it reads over wallpaper */}
-          {!isOnline && (
-            <div style={{
-              marginTop: 8, padding: "7px 14px", borderRadius: 10, textAlign: "center",
-              background: isSpaghetti ? "rgba(160,90,0,0.88)" : "rgba(255,149,0,0.18)",
-              border: `1px solid ${isSpaghetti ? "rgba(255,190,60,0.5)" : "rgba(255,149,0,0.35)"}`,
-              fontSize: 12, fontWeight: 500,
-              color: isSpaghetti ? "#FFE0A0" : isDark ? "#FFCC00" : "#8A5A00",
-            }}>
-              Offline — changes saved locally, will sync when reconnected
-            </div>
-          )}
-        </div>
+        )}
 
         {displayed.length === 0 && (
           <div style={{ padding: 60, textAlign: "center" }}>
@@ -984,7 +944,6 @@ export default function SpaghettiWall() {
                 transform: wrapShift ? `translateY(${wrapShift}px)` : undefined,
                 transition: reorderingId ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1)" : "none",
                 touchAction: "pan-y",
-                filter: glassMode && isSpaghetti ? "brightness(1.5)" : undefined,
               }}>
               <IdeaRow
                 idea={idea}
@@ -996,7 +955,6 @@ export default function SpaghettiWall() {
                 t={t}
                 isDark={isDark}
                 isSpaghetti={isSpaghetti}
-                glassMode={glassMode}
                 setSelected={setSelected}
                 setNoteInput={setNoteInput}
                 setEditingTitle={setEditingTitle}
@@ -1005,6 +963,16 @@ export default function SpaghettiWall() {
             </div>
           );
         })}
+
+        {/* Footer */}
+        <footer style={{ borderTop: "0.5px solid rgba(var(--rgb),0.07)", padding: "1.75rem 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "2rem" }}>
+          <button onClick={() => window.kairoShowSplash?.()} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 900, letterSpacing: "0.04em", fontFamily: "'Jost',system-ui,sans-serif", fontStyle: "italic" }}>
+              <span style={{ color: "#2a3a6a" }}>k</span><span style={{ color: "#5b80e8" }}>ai</span><span style={{ color: "#2a3a6a" }}>ro</span>
+            </span>
+          </button>
+          <span style={{ fontSize: "0.6rem", color: "rgba(240,240,240,0.2)", letterSpacing: "0.1em", fontWeight: 500 }}>© 2026</span>
+        </footer>
 
         {/* Bottom spacer for FAB */}
         <div style={{ height: 80 }} />
