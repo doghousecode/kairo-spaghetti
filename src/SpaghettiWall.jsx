@@ -125,8 +125,8 @@ const IdeaRow = memo(function IdeaRow({
 
   useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
-  const cardBg = isSpaghetti ? "rgba(0,0,0,0.45)" : isDark ? "rgba(255,255,255,0.04)" : "rgba(15,15,30,0.04)";
-  const cardBorder = isSpaghetti ? "1px solid rgba(255,255,255,0.12)" : isDark ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(15,15,30,0.09)";
+  const cardBg = isSpaghetti ? "rgba(12,12,22,0.82)" : isDark ? "rgba(255,255,255,0.04)" : "rgba(15,15,30,0.04)";
+  const cardBorder = isSpaghetti ? "1px solid rgba(255,255,255,0.10)" : isDark ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(15,15,30,0.09)";
 
   return (
     <div
@@ -878,17 +878,15 @@ export default function SpaghettiWall() {
                   background: "transparent", color: t.destructive, cursor: "pointer",
                 }}>Clear</button>
               )}
-              {/* Sort toggle */}
-              <div style={{ marginLeft: "auto", display: "flex", gap: 2, borderRadius: 8, padding: 2, flexShrink: 0, background: "rgba(var(--rgb),0.06)" }}>
-                {[{ key: "modified", label: "🕐" }, { key: "priority", label: "‼️" }, { key: "none", label: "🎚️" }].map(opt => (
-                  <button key={opt.key} onClick={() => setSortBy(opt.key)} style={{
-                    width: 30, height: 26, borderRadius: 6, border: "none", fontSize: 12,
-                    background: sortBy === opt.key ? "rgba(var(--rgb),0.12)" : "transparent",
-                    color: sortBy === opt.key ? "#5b80e8" : "rgba(var(--rgb),0.3)",
-                    cursor: "pointer", transition: "all 0.15s ease",
-                  }}>{opt.label}</button>
-                ))}
-              </div>
+              {/* Sort toggle — single cycling pill */}
+              <button onClick={() => setSortBy(s => s === "modified" ? "priority" : s === "priority" ? "none" : "modified")} style={{
+                fontSize: "0.75rem", padding: "6px 12px", borderRadius: "9999px", marginLeft: "auto", flexShrink: 0,
+                border: "1px solid rgba(var(--rgb),0.09)", background: "transparent",
+                color: sortBy === "modified" ? "rgba(var(--rgb),0.38)" : "#5b80e8",
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}>
+                {sortBy === "modified" ? "Recent" : sortBy === "priority" ? "Priority" : "Manual"}
+              </button>
             </div>
           </div>
 
