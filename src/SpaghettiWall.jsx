@@ -817,7 +817,7 @@ export default function SpaghettiWall() {
             <a href="https://meetkairo.ai" style={{ display: "block", lineHeight: 0 }}>
               <img src="/kairo-wordmark-cropped.png" alt="Kairo" style={{ height: "28px", width: "auto", display: "block", transform: "translateY(-1px)" }} />
             </a>
-            <span style={{ fontFamily: "'Jost',system-ui,sans-serif", fontWeight: 700, fontStyle: "italic", fontSize: "1.8rem", textTransform: "lowercase", color: "#5b80e8", lineHeight: 1 }}>spaghetti wall</span>
+            <span style={{ fontFamily: "'Jost',system-ui,sans-serif", fontWeight: 700, fontStyle: "italic", fontSize: "2.2rem", textTransform: "lowercase", color: "#5b80e8", lineHeight: 1 }}>spaghetti wall</span>
             <button
               onClick={() => setThemeMode(m => m === "light" ? "dark" : m === "dark" ? "spaghetti" : "light")}
               title="Cycle theme: light → dark → spaghetti"
