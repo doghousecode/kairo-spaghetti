@@ -813,16 +813,16 @@ export default function SpaghettiWall() {
         <div style={{ maxWidth: 680, margin: "0 auto", paddingTop: "1.1rem", paddingBottom: "1rem" }}>
 
           {/* Logo row */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", position: "relative", paddingRight: "36px" }}>
             <a href="https://meetkairo.ai" style={{ display: "block", lineHeight: 0 }}>
               <img src="/kairo-wordmark-cropped.png" alt="Kairo" style={{ height: "28px", width: "auto", display: "block", transform: "translateY(-1px)" }} />
             </a>
-            <span style={{ fontFamily: "'Jost',system-ui,sans-serif", fontWeight: 700, fontStyle: "italic", fontSize: "2.2rem", textTransform: "lowercase", color: "#5b80e8", lineHeight: 1 }}>spaghetti</span>
+            <span style={{ fontFamily: "'Jost',system-ui,sans-serif", fontWeight: 700, fontStyle: "italic", fontSize: "1.8rem", textTransform: "lowercase", color: "#5b80e8", lineHeight: 1 }}>spaghetti wall</span>
             <button
               onClick={() => setThemeMode(m => m === "light" ? "dark" : m === "dark" ? "spaghetti" : "light")}
               title="Cycle theme: light → dark → spaghetti"
-              style={{ marginLeft: "auto", position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "1.15rem", lineHeight: 1, padding: "4px 2px" }}
-            >🍝</button>
+              style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "1.15rem", lineHeight: 1, padding: "4px 2px" }}
+            >{themeMode === "dark" ? "🌙" : themeMode === "light" ? "☀️" : "🍝"}</button>
           </div>
 
           <p style={{ fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: "1rem", color: "rgba(var(--rgb),0.32)", marginTop: "8px" }}>
@@ -861,35 +861,37 @@ export default function SpaghettiWall() {
             opacity: showCategories ? 1 : 0,
             transition: "max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease",
           }}>
-            <div ref={categoriesRef} style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", paddingTop: "10px", paddingBottom: "6px" }}>
-              {allTags.slice(0, 20).map(tg => {
-                const tc = tagColor(tg, isDark || isSpaghetti);
-                const isActive = filterTags.includes(tg);
-                return (
-                  <button key={tg} onClick={() => setFilterTags(p => isActive ? p.filter(x => x !== tg) : [...p, tg])} style={{
-                    fontSize: "0.75rem", padding: "6px 12px", borderRadius: "9999px",
-                    border: isActive ? "1px solid rgba(99,102,241,0.55)" : "1px solid rgba(var(--rgb),0.09)",
-                    background: isActive ? "rgba(99,102,241,0.18)" : "transparent",
-                    color: isActive ? "rgba(199,210,254,1)" : "rgba(var(--rgb),0.38)",
-                    cursor: "pointer", whiteSpace: "nowrap",
-                  }}>{tg}</button>
-                );
-              })}
-              {filterTags.length > 0 && (
-                <button onClick={() => setFilterTags([])} style={{
-                  fontSize: "0.75rem", padding: "6px 10px", borderRadius: "9999px", border: "none",
-                  background: "transparent", color: t.destructive, cursor: "pointer",
-                }}>Clear</button>
-              )}
-              {/* Separator + sort toggle */}
-              <div style={{ width: 1, height: 18, background: "rgba(var(--rgb),0.12)", flexShrink: 0, alignSelf: "center" }} />
-              <button onClick={() => setSortBy(s => s === "modified" ? "priority" : s === "priority" ? "none" : "modified")} style={{
-                fontSize: "0.75rem", padding: "6px 12px", borderRadius: "9999px", flexShrink: 0,
-                border: "1px solid rgba(var(--rgb),0.09)", background: "transparent",
-                color: sortBy === "modified" ? "rgba(var(--rgb),0.38)" : "#5b80e8",
-                cursor: "pointer", whiteSpace: "nowrap",
-              }}>
-                {sortBy === "modified" ? "Recent" : sortBy === "priority" ? "Priority" : "Manual"}
+            <div ref={categoriesRef} style={{ position: "relative", paddingTop: "10px", paddingBottom: "6px", paddingRight: "36px" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                {allTags.slice(0, 20).map(tg => {
+                  const tc = tagColor(tg, isDark || isSpaghetti);
+                  const isActive = filterTags.includes(tg);
+                  return (
+                    <button key={tg} onClick={() => setFilterTags(p => isActive ? p.filter(x => x !== tg) : [...p, tg])} style={{
+                      fontSize: "0.75rem", padding: "6px 12px", borderRadius: "9999px",
+                      border: isActive ? "1px solid rgba(99,102,241,0.55)" : "1px solid rgba(var(--rgb),0.09)",
+                      background: isActive ? "rgba(99,102,241,0.18)" : "transparent",
+                      color: isActive ? "rgba(199,210,254,1)" : "rgba(var(--rgb),0.38)",
+                      cursor: "pointer", whiteSpace: "nowrap",
+                    }}>{tg}</button>
+                  );
+                })}
+                {filterTags.length > 0 && (
+                  <button onClick={() => setFilterTags([])} style={{
+                    fontSize: "0.75rem", padding: "6px 10px", borderRadius: "9999px", border: "none",
+                    background: "transparent", color: t.destructive, cursor: "pointer",
+                  }}>Clear</button>
+                )}
+              </div>
+              {/* Sort emoji — fixed right with faint separator, vertically aligned with theme button */}
+              <button
+                onClick={() => setSortBy(s => s === "modified" ? "priority" : s === "priority" ? "none" : "modified")}
+                style={{ position: "absolute", right: 0, top: "10px", display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+              >
+                <div style={{ width: 1, height: 18, background: "rgba(var(--rgb),0.12)" }} />
+                <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>
+                  {sortBy === "modified" ? "🕐" : sortBy === "priority" ? "‼️" : "🎚️"}
+                </span>
               </button>
             </div>
           </div>
