@@ -190,7 +190,8 @@ const IdeaRow = memo(function IdeaRow({
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 16, fontWeight: 500, color: t.text, lineHeight: 1.3,
+          fontSize: 16, fontWeight: 700, color: t.text, lineHeight: 1.3,
+          textTransform: "capitalize",
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>{idea.title}</div>
         {idea.text && (
@@ -792,6 +793,8 @@ export default function SpaghettiWall() {
         @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); } }
         @keyframes ai-border-spin { to { transform: rotate(1turn); } }
         @keyframes ai-glow-pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+        @keyframes ph-shimmer { 0%,100% { color: rgba(147,197,253,0.55); } 33% { color: rgba(216,180,254,0.55); } 66% { color: rgba(249,168,212,0.55); } }
+        ::placeholder { animation: ph-shimmer 5s ease-in-out infinite; font-weight: 700; }
         @media (max-width: 768px) { .spaghetti-wallpaper { background-size: 300% !important; background-position: center 40% !important; } }
         .btn-secondary { transition: all 0.15s ease; }
         .btn-secondary:hover { opacity: 0.8; }
@@ -845,7 +848,7 @@ export default function SpaghettiWall() {
               style={{
                 position: "relative", zIndex: 2, width: "100%",
                 background: "transparent", border: "none", outline: "none",
-                fontFamily: "inherit", fontSize: "16px", padding: "14px 16px",
+                fontFamily: "inherit", fontSize: "16px", fontWeight: 700, padding: "14px 16px",
                 color: t.text,
               }}
             />
