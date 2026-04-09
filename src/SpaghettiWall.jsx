@@ -881,9 +881,10 @@ export default function SpaghettiWall() {
                   background: "transparent", color: t.destructive, cursor: "pointer",
                 }}>Clear</button>
               )}
-              {/* Sort toggle — single cycling pill */}
+              {/* Separator + sort toggle */}
+              <div style={{ width: 1, height: 18, background: "rgba(var(--rgb),0.12)", flexShrink: 0, alignSelf: "center" }} />
               <button onClick={() => setSortBy(s => s === "modified" ? "priority" : s === "priority" ? "none" : "modified")} style={{
-                fontSize: "0.75rem", padding: "6px 12px", borderRadius: "9999px", marginLeft: "auto", flexShrink: 0,
+                fontSize: "0.75rem", padding: "6px 12px", borderRadius: "9999px", flexShrink: 0,
                 border: "1px solid rgba(var(--rgb),0.09)", background: "transparent",
                 color: sortBy === "modified" ? "rgba(var(--rgb),0.38)" : "#5b80e8",
                 cursor: "pointer", whiteSpace: "nowrap",
